@@ -5,9 +5,30 @@ build-backend = "uv_build"
 [project]
 name = "pytryagain"
 version = "0.1.0"
+description = "A lightweight, zero-dependency retry decorator for sync and async Python functions."
+readme = "README.md"
 requires-python = ">=3.10"
 dependencies = []
-readme = "README.md"
+license = "MIT"
+authors = [{ name = "Eugene Liukin", email = "eugeneliukin.dev@gmail.com" }]
+keywords = ["retry", "backoff", "decorator", "async", "resilience"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Typing :: Typed",
+]
+
+[project.urls]
+Homepage = "https://github.com/eugeneliukin/pytryagain"
+Repository = "https://github.com/eugeneliukin/pytryagain"
+Issues = "https://github.com/eugeneliukin/pytryagain/issues"
 
 [dependency-groups]
 typing = [
