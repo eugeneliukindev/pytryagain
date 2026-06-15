@@ -20,6 +20,7 @@ jobs:
       - uses: astral-sh/setup-uv@v6
         with:
           enable-cache: true
+      - uses: extractions/setup-just@v2
       - run: just lint
 
   typecheck:
@@ -29,6 +30,7 @@ jobs:
       - uses: astral-sh/setup-uv@v6
         with:
           enable-cache: true
+      - uses: extractions/setup-just@v2
       - run: just typecheck
 
   test:
@@ -38,4 +40,5 @@ jobs:
       - uses: astral-sh/setup-uv@v6
         with:
           enable-cache: true
+      - uses: extractions/setup-just@v2
       - run: just test
