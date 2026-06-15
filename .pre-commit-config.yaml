@@ -66,6 +66,18 @@ repos:
       - id: uv-lock
         name: Check uv.lock is in sync with pyproject.toml
 
+      - id: uv-export
+        name: Export dev dependencies
+        args:
+          - "--frozen"
+          - "--all-groups"
+          - "--output-file=requirements.dev.txt"
+          - "--quiet"
+          - "--no-annotate"
+          - "--no-hashes"
+          - "--no-header"
+        files: ^uv\.lock$
+
   - repo: https://github.com/commitizen-tools/commitizen
     rev: v4.8.3
     hooks:
