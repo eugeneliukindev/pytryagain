@@ -2,10 +2,10 @@
 
 **A lightweight, zero-dependency retry decorator for sync and async Python functions.**
 
-[![CI](https://github.com/eugeneliukin/pytryagain/actions/workflows/ci.yml/badge.svg)](https://github.com/eugeneliukin/pytryagain/actions/workflows/ci.yml)
+[![CI](https://github.com/eugeneliukindev/pytryagain/actions/workflows/ci.yml/badge.svg)](https://github.com/eugeneliukindev/pytryagain/actions/workflows/ci.yml)
 [![PyPI](https://img.shields.io/pypi/v/pytryagain)](https://pypi.org/project/pytryagain/)
 [![Python](https://img.shields.io/pypi/pyversions/pytryagain)](https://pypi.org/project/pytryagain/)
-[![License](https://img.shields.io/github/license/eugeneliukin/pytryagain)](LICENSE)
+[![License](https://img.shields.io/github/license/eugeneliukindev/pytryagain)](LICENSE)
 
 ---
 

@@ -26,9 +26,9 @@ classifiers = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/eugeneliukin/pytryagain"
-Repository = "https://github.com/eugeneliukin/pytryagain"
-Issues = "https://github.com/eugeneliukin/pytryagain/issues"
+Homepage = "https://github.com/eugeneliukindev/pytryagain"
+Repository = "https://github.com/eugeneliukindev/pytryagain"
+Issues = "https://github.com/eugeneliukindev/pytryagain/issues"
 
 [dependency-groups]
 typing = [
