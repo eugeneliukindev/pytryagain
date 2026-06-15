@@ -7,5 +7,4 @@ class _Sentinel:
         return cls._instance
 
 
-# 12
 _MISSING = _Sentinel()
