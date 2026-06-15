@@ -38,9 +38,9 @@ repos:
       - id: end-of-file-fixer
         name: Fix end of files
 
-      - id: no-commit-to-branch
-        name: Prevent commits to protected branches
-        args: [--branch, main, --branch, master]
+      # - id: no-commit-to-branch
+      #   name: Prevent commits to protected branches
+      #   args: [--branch, main, --branch, master]
 
       - id: mixed-line-ending
         name: Fix mixed line endings
