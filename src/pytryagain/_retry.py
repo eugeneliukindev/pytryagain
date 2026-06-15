@@ -38,51 +38,51 @@ def _validate_retry_params(
 @overload
 def retry(
     func: Callable[_P, Awaitable[_T]],
-    tries: int,
-    backoff: BackOff,
-    exceptions: tuple[type[BaseException], ...],
-    on_exception_callback: AnyExceptionCallback | _Sentinel,
-    on_giveup_callback: AnyExceptionCallback | _Sentinel,
-    retry_if: RetryPredicate | _Sentinel,
-    timeout: float | _Sentinel,
+    tries: int = ...,
+    exceptions: tuple[type[BaseException], ...] = ...,
+    timeout: float | _Sentinel = ...,
+    backoff: BackOff = ...,
+    retry_if: RetryPredicate | _Sentinel = ...,
+    on_exception_callback: AnyExceptionCallback | _Sentinel = ...,
+    on_giveup_callback: AnyExceptionCallback | _Sentinel = ...,
 ) -> Callable[_P, Awaitable[_T]]: ...
 
 
 @overload
 def retry(
-    func: _Sentinel,
-    tries: int,
-    backoff: BackOff,
-    exceptions: tuple[type[BaseException], ...],
-    on_exception_callback: AnyExceptionCallback | _Sentinel,
-    on_giveup_callback: AnyExceptionCallback | _Sentinel,
-    retry_if: RetryPredicate | _Sentinel,
-    timeout: float | _Sentinel,
+    func: _Sentinel = ...,
+    tries: int = ...,
+    exceptions: tuple[type[BaseException], ...] = ...,
+    timeout: float | _Sentinel = ...,
+    backoff: BackOff = ...,
+    retry_if: RetryPredicate | _Sentinel = ...,
+    on_exception_callback: AnyExceptionCallback | _Sentinel = ...,
+    on_giveup_callback: AnyExceptionCallback | _Sentinel = ...,
 ) -> Callable[[Callable[_P, _T]], Callable[_P, _T]]: ...
 
 
 @overload
 def retry(
     func: Callable[_P, _T],
-    tries: int,
-    backoff: BackOff,
-    exceptions: tuple[type[BaseException], ...],
-    on_exception_callback: SyncExceptionCallback | _Sentinel,
-    on_giveup_callback: SyncExceptionCallback | _Sentinel,
-    retry_if: RetryPredicate | _Sentinel,
-    timeout: float | _Sentinel,
+    tries: int = ...,
+    exceptions: tuple[type[BaseException], ...] = ...,
+    timeout: float | _Sentinel = ...,
+    backoff: BackOff = ...,
+    retry_if: RetryPredicate | _Sentinel = ...,
+    on_exception_callback: SyncExceptionCallback | _Sentinel = ...,
+    on_giveup_callback: SyncExceptionCallback | _Sentinel = ...,
 ) -> Callable[_P, _T]: ...
 
 
 def retry(
     func: Callable[_P, _T] | _Sentinel = _MISSING,
     tries: int = 3,
-    backoff: BackOff = _DEFAULT_BACKOFF,
     exceptions: tuple[type[BaseException], ...] = (Exception,),
+    timeout: float | _Sentinel = _MISSING,
+    backoff: BackOff = _DEFAULT_BACKOFF,
+    retry_if: RetryPredicate | _Sentinel = _MISSING,
     on_exception_callback: AnyExceptionCallback | _Sentinel = _MISSING,
     on_giveup_callback: AnyExceptionCallback | _Sentinel = _MISSING,
-    retry_if: RetryPredicate | _Sentinel = _MISSING,
-    timeout: float | _Sentinel = _MISSING,
 ) -> Callable[_P, _T] | Callable[_P, Awaitable[_T]]:
     """Decorator that retries a function on exception.
 
@@ -94,10 +94,15 @@ def retry(
             decorator (decorator factory mode).
         tries: Total number of attempts, including the first call. ``tries=1``
             means no retries. Must be >= 1.
-        backoff: Delay strategy between attempts. Receives the current attempt
-            number (1-based) and returns the sleep duration in seconds.
         exceptions: Tuple of exception types that trigger a retry. Any other
             exception propagates immediately without retrying.
+        timeout: Total time budget in seconds across all attempts. Once elapsed,
+            the current exception is re-raised without further retries.
+        backoff: Delay strategy between attempts. Receives the current attempt
+            number (1-based) and returns the sleep duration in seconds.
+        retry_if: Predicate called with the caught exception. Return ``True``
+            to retry, ``False`` to re-raise immediately (after calling
+            ``on_giveup_callback``). When omitted, all matching exceptions retry.
         on_exception_callback: Called after each failed attempt except the last.
             Receives the exception and the 1-based attempt number. For async
             functions, both sync and async callbacks are accepted. For sync
@@ -105,11 +110,6 @@ def retry(
         on_giveup_callback: Called once when all attempts are exhausted or a
             retry is aborted by ``retry_if``, before re-raising the exception.
             Same sync/async rules as ``on_exception_callback``.
-        retry_if: Predicate called with the caught exception. Return ``True``
-            to retry, ``False`` to re-raise immediately (after calling
-            ``on_giveup_callback``). When omitted, all matching exceptions retry.
-        timeout: Total time budget in seconds across all attempts. Once elapsed,
-            the current exception is re-raised without further retries.
 
     Returns:
         The wrapped function preserving the original signature, or a partially
@@ -173,12 +173,12 @@ def retry(
             partial(
                 retry,
                 tries=tries,
-                backoff=backoff,
                 exceptions=exceptions,
+                timeout=timeout,
+                backoff=backoff,
+                retry_if=retry_if,
                 on_exception_callback=on_exception_callback,
                 on_giveup_callback=on_giveup_callback,
-                retry_if=retry_if,
-                timeout=timeout,
             ),
         )
 
