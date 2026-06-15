@@ -25,7 +25,7 @@ test *args:
 [doc("Run all checks")]
 [group("infra")]
 [parallel]
-check: lint typecheck
+check: lint typecheck test
 
 [doc("Release a new version: just release patch|minor|major")]
 [group("release")]
