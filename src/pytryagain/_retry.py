@@ -38,39 +38,39 @@ def _validate_retry_params(
 @overload
 def retry(
     func: Callable[_P, Awaitable[_T]],
-    tries: int = ...,
-    exceptions: tuple[type[BaseException], ...] = ...,
-    timeout: float | _Sentinel = ...,
-    backoff: BackOff = ...,
-    retry_if: RetryPredicate | _Sentinel = ...,
-    on_exception_callback: AnyExceptionCallback | _Sentinel = ...,
-    on_giveup_callback: AnyExceptionCallback | _Sentinel = ...,
+    tries: int,
+    exceptions: tuple[type[BaseException], ...],
+    timeout: float | _Sentinel,
+    backoff: BackOff,
+    retry_if: RetryPredicate | _Sentinel,
+    on_exception_callback: AnyExceptionCallback | _Sentinel,
+    on_giveup_callback: AnyExceptionCallback | _Sentinel,
 ) -> Callable[_P, Awaitable[_T]]: ...
 
 
 @overload
 def retry(
-    func: _Sentinel = ...,
-    tries: int = ...,
-    exceptions: tuple[type[BaseException], ...] = ...,
-    timeout: float | _Sentinel = ...,
-    backoff: BackOff = ...,
-    retry_if: RetryPredicate | _Sentinel = ...,
-    on_exception_callback: AnyExceptionCallback | _Sentinel = ...,
-    on_giveup_callback: AnyExceptionCallback | _Sentinel = ...,
+    func: _Sentinel,
+    tries: int,
+    exceptions: tuple[type[BaseException], ...],
+    timeout: float | _Sentinel,
+    backoff: BackOff,
+    retry_if: RetryPredicate | _Sentinel,
+    on_exception_callback: AnyExceptionCallback | _Sentinel,
+    on_giveup_callback: AnyExceptionCallback | _Sentinel,
 ) -> Callable[[Callable[_P, _T]], Callable[_P, _T]]: ...
 
 
 @overload
 def retry(
     func: Callable[_P, _T],
-    tries: int = ...,
-    exceptions: tuple[type[BaseException], ...] = ...,
-    timeout: float | _Sentinel = ...,
-    backoff: BackOff = ...,
-    retry_if: RetryPredicate | _Sentinel = ...,
-    on_exception_callback: SyncExceptionCallback | _Sentinel = ...,
-    on_giveup_callback: SyncExceptionCallback | _Sentinel = ...,
+    tries: int,
+    exceptions: tuple[type[BaseException], ...],
+    timeout: float | _Sentinel,
+    backoff: BackOff,
+    retry_if: RetryPredicate | _Sentinel,
+    on_exception_callback: SyncExceptionCallback | _Sentinel,
+    on_giveup_callback: SyncExceptionCallback | _Sentinel,
 ) -> Callable[_P, _T]: ...
 
 
