@@ -34,7 +34,7 @@ release bump="patch":
     uv run --group lint ruff check src/
     uv run --group typing mypy src/
     uv version --bump {{bump}}
-    git add pyproject.toml
+    git add pyproject.toml uv.lock
     git commit -m "chore: bump version to $(uv version --short)"
     git tag "v$(uv version --short)"
     git push && git push --tags
