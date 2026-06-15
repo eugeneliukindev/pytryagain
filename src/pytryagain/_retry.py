@@ -16,6 +16,25 @@ _T = TypeVar("_T")
 _DEFAULT_BACKOFF: BackOff = ExponentialJitterBackoff()
 
 
+def _validate_retry_params(
+    tries: int,
+    timeout: float | _Sentinel,
+    exceptions: tuple[type[BaseException], ...],
+) -> None:
+    if not isinstance(tries, int) or tries < 1:
+        msg = f"tries must be an integer >= 1, got {tries!r}"
+        raise ValueError(msg)
+    if not isinstance(timeout, _Sentinel) and (not isinstance(timeout, (int, float)) or timeout <= 0):
+        msg = f"timeout must be a positive number, got {timeout!r}"
+        raise ValueError(msg)
+    if not isinstance(exceptions, tuple) or not exceptions:
+        msg = f"exceptions must be a non-empty tuple of exception types, got {exceptions!r}"
+        raise ValueError(msg)
+    if not all(isinstance(exc, type) and issubclass(exc, BaseException) for exc in exceptions):
+        msg = f"all items in exceptions must be BaseException subclasses, got {exceptions!r}"
+        raise ValueError(msg)
+
+
 @overload
 def retry(
     func: Callable[_P, Awaitable[_T]],
@@ -146,6 +165,8 @@ def retry(
         >>> @retry(tries=3, on_giveup_callback=async_alert)
         ... async def critical_async_job() -> None: ...
     """
+    _validate_retry_params(tries, timeout, exceptions)
+
     if isinstance(func, _Sentinel):
         return cast(
             "Callable[_P, _T]",

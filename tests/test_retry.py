@@ -121,6 +121,28 @@ class TestSyncRetry:
             retry(tries=2, on_giveup_callback=AsyncMock())(lambda: None)
 
 
+class TestValidation:
+    def test_raises_for_tries_less_than_one(self) -> None:
+        with pytest.raises(ValueError, match="tries must be an integer >= 1"):
+            retry(tries=0)(lambda: None)
+
+    def test_raises_for_tries_not_int(self) -> None:
+        with pytest.raises(ValueError, match="tries must be an integer >= 1"):
+            retry(tries=1.5)(lambda: None)  # type: ignore[arg-type]
+
+    def test_raises_for_non_positive_timeout(self) -> None:
+        with pytest.raises(ValueError, match="timeout must be a positive number"):
+            retry(timeout=0.0)(lambda: None)
+
+    def test_raises_for_empty_exceptions_tuple(self) -> None:
+        with pytest.raises(ValueError, match="non-empty tuple"):
+            retry(exceptions=())(lambda: None)
+
+    def test_raises_for_non_exception_in_exceptions(self) -> None:
+        with pytest.raises(ValueError, match="BaseException subclasses"):
+            retry(exceptions=(str,))(lambda: None)  # type: ignore[arg-type]
+
+
 class TestDecoratorFactory:
     def test_factory_mode(self) -> None:
         decorator = retry(tries=2, backoff=_BACKOFF)
