@@ -16,8 +16,4 @@ def _should_give_up(
     exc: BaseException,
 ) -> bool:
     timed_out = deadline is not None and time.monotonic() >= deadline
-    return (
-        attempt >= tries
-        or timed_out
-        or (not isinstance(retry_if, _Sentinel) and not retry_if(exc))
-    )
+    return attempt >= tries or timed_out or (not isinstance(retry_if, _Sentinel) and not retry_if(exc))

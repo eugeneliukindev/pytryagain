@@ -25,7 +25,9 @@ class TestDeterministicBackoff:
             pytest.param(ExponentialBackoff(base=2.0, initial=1.0), 3, 8.0, id="exponential-attempt-3"),
             pytest.param(FibonacciBackoff(base=1.0), 1, 1.0, id="fibonacci-attempt-1"),
             pytest.param(FibonacciBackoff(base=1.0), 5, 5.0, id="fibonacci-attempt-5"),
-            pytest.param(TruncatedExponentialBackoff(base=2.0, initial=1.0, cap=100.0), 3, 8.0, id="truncated-under-cap"),
+            pytest.param(
+                TruncatedExponentialBackoff(base=2.0, initial=1.0, cap=100.0), 3, 8.0, id="truncated-under-cap"
+            ),
             pytest.param(TruncatedExponentialBackoff(base=2.0, initial=1.0, cap=5.0), 3, 5.0, id="truncated-at-cap"),
         ],
     )
