@@ -9,8 +9,8 @@ _default:
 [doc("Ruff format + check")]
 [group("linter")]
 lint:
-    uv run --group lint ruff format --check src/
-    uv run --group lint ruff check src/
+    uv run --group lint ruff format --check
+    uv run --group lint ruff check
 
 [doc("Mypy check")]
 [group("static analysis")]

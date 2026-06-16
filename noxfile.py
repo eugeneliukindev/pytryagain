@@ -24,9 +24,9 @@ def tests(session: nox.Session) -> None:
 @nox.session(venv_backend="none")
 def lint(session: nox.Session) -> None:
     session.log("Checking ruff format")
-    session.run("uv", "run", "--locked", "--group=lint", "ruff", "format", "--check", "src/", external=True)
+    session.run("uv", "run", "--locked", "--group=lint", "ruff", "format", "--check", external=True)
     session.log("Running ruff lint")
-    session.run("uv", "run", "--locked", "--group=lint", "ruff", "check", "src/", external=True)
+    session.run("uv", "run", "--locked", "--group=lint", "ruff", "check", external=True)
 
 
 @nox.session(venv_backend="none")
