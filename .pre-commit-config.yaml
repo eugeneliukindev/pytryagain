@@ -58,6 +58,8 @@ repos:
         name: Check commit message follows Conventional Commits
         stages: [commit-msg]
 
+  # Local hooks run via uv run --locked so all tools use versions from uv.lock,
+  # keeping pre-commit and CI in sync without maintaining separate version pins.
   - repo: local
     hooks:
       - id: uv-lock
