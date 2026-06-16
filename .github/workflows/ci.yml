@@ -19,7 +19,7 @@ jobs:
         with:
           enable-cache: true
       - uses: extractions/setup-just@v2
-      - run: just nox -s lint
+      - run: just lint
 
   typecheck:
     name: Mypy
@@ -30,7 +30,7 @@ jobs:
         with:
           enable-cache: true
       - uses: extractions/setup-just@v2
-      - run: just nox -s typecheck
+      - run: just typecheck
 
   file_checks:
     name: File checks (pre-commit)
@@ -41,7 +41,7 @@ jobs:
         with:
           enable-cache: true
       - uses: extractions/setup-just@v2
-      - run: just nox -s file_checks
+      - run: just file_checks
 
   commitizen:
     name: Commit message lint
@@ -87,4 +87,4 @@ jobs:
         with:
           enable-cache: true
       - uses: extractions/setup-just@v2
-      - run: just nox -s pkg_meta
+      - run: just pkg_meta
