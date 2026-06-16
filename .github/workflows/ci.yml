@@ -6,6 +6,7 @@ on:
 
 jobs:
   commitizen:
+    name: Commit message lint
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -14,6 +15,7 @@ jobs:
       - uses: wagoid/commitlint-github-action@v6
 
   lint:
+    name: Ruff
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -21,9 +23,10 @@ jobs:
         with:
           enable-cache: true
       - uses: extractions/setup-just@v2
-      - run: just lint
+      - run: just nox -s lint
 
   typecheck:
+    name: Mypy
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -31,9 +34,35 @@ jobs:
         with:
           enable-cache: true
       - uses: extractions/setup-just@v2
-      - run: just typecheck
+      - run: just nox -s typecheck
 
-  test:
+  tests:
+    name: Tests (Python ${{ matrix.python }}, ${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python: ["3.10", "3.11", "3.12", "3.13", "3.14", "3.15"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          python-version: ${{ matrix.python }}
+      - uses: extractions/setup-just@v2
+      - run: just nox -s tests-${{ matrix.python }}
+      - name: Upload coverage reports to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          slug: eugeneliukindev/pytryagain
+          files: coverage/coverage.xml
+          flags: ${{ matrix.os }}-py${{ matrix.python }}
+          fail_ci_if_error: true
+
+  pkg_meta:
+    name: Package metadata
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -41,4 +70,4 @@ jobs:
         with:
           enable-cache: true
       - uses: extractions/setup-just@v2
-      - run: just test
+      - run: just nox -s pkg_meta
