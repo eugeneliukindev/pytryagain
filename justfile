@@ -116,3 +116,4 @@ bump *args:
 release *args:
     just bump {{args}}
     git push && git push --tags
+    just clean
