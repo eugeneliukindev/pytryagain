@@ -1,18 +1,15 @@
-import inspect
 from collections.abc import Mapping
-from typing import cast
 
-from ._sentinel import _MISSING, _Sentinel
-from ._types import AnyExceptionCallback, BackOffByException, RetryIfException, RetryIfResult
+from ._types import AnyExceptionCallback, BackOffByException, ShouldRetry
 from .backoff import BackOff
 
 
-def _validate_tries(tries: object) -> None:
-    if not isinstance(tries, int) or isinstance(tries, bool):
-        msg = f"tries must be int, got {type(tries).__name__!r}"
+def _validate_max_attempts(max_attempts: object) -> None:
+    if not isinstance(max_attempts, int) or isinstance(max_attempts, bool):
+        msg = f"max_attempts must be int, got {type(max_attempts).__name__!r}"
         raise TypeError(msg)
-    if tries < 1:
-        msg = f"tries must be >= 1, got {tries!r}"
+    if max_attempts < 1:
+        msg = f"max_attempts must be >= 1, got {max_attempts!r}"
         raise ValueError(msg)
 
 
@@ -29,8 +26,6 @@ def _validate_exceptions(exceptions: object) -> None:
 
 
 def _validate_timeout(timeout: object) -> None:
-    if timeout is _MISSING:
-        return
     if not isinstance(timeout, (int, float)) or isinstance(timeout, bool):
         msg = f"timeout must be a positive number, got {type(timeout).__name__!r}"
         raise TypeError(msg)
@@ -46,12 +41,12 @@ def _validate_default_backoff(default_backoff: object) -> None:
 
 
 def _validate_backoff_by_exception(backoff_by_exception: object) -> None:
-    if backoff_by_exception is _MISSING:
+    if backoff_by_exception is None:
         return
     if not isinstance(backoff_by_exception, Mapping):
         msg = f"backoff_by_exception must be a Mapping, got {type(backoff_by_exception).__name__!r}"
         raise TypeError(msg)
-    for k, v in cast("Mapping[object, object]", backoff_by_exception).items():
+    for k, v in backoff_by_exception.items():
         if not (isinstance(k, type) and issubclass(k, BaseException)):
             msg = f"backoff_by_exception keys must be BaseException subclasses, got {k!r}"
             raise TypeError(msg)
@@ -60,59 +55,54 @@ def _validate_backoff_by_exception(backoff_by_exception: object) -> None:
             raise TypeError(msg)
 
 
-def _validate_retry_if_exception(retry_if_exception: object) -> None:
-    if retry_if_exception is not _MISSING and not callable(retry_if_exception):
-        msg = f"retry_if_exception must be callable, got {type(retry_if_exception).__name__!r}"
+def _validate_should_retry(should_retry: object) -> None:
+    if should_retry is not None and not callable(should_retry):
+        msg = f"should_retry must be callable, got {type(should_retry).__name__!r}"
         raise TypeError(msg)
 
 
-def _validate_retry_if_result(retry_if_result: object) -> None:
-    if retry_if_result is not _MISSING and not callable(retry_if_result):
-        msg = f"retry_if_result must be callable, got {type(retry_if_result).__name__!r}"
+def _validate_on_retry_callback(on_retry_callback: object) -> None:
+    if on_retry_callback is not None and not callable(on_retry_callback):
+        msg = f"on_retry_callback must be callable, got {type(on_retry_callback).__name__!r}"
         raise TypeError(msg)
 
 
-def _validate_on_exception_callback(on_exception_callback: object) -> None:
-    if on_exception_callback is not _MISSING and not callable(on_exception_callback):
-        msg = f"on_exception_callback must be callable, got {type(on_exception_callback).__name__!r}"
-        raise TypeError(msg)
-
-
-def _validate_on_giveup_callback(on_giveup_callback: object) -> None:
-    if on_giveup_callback is not _MISSING and not callable(on_giveup_callback):
-        msg = f"on_giveup_callback must be callable, got {type(on_giveup_callback).__name__!r}"
+def _validate_on_give_up_callback(on_give_up_callback: object) -> None:
+    if on_give_up_callback is not None and not callable(on_give_up_callback):
+        msg = f"on_give_up_callback must be callable, got {type(on_give_up_callback).__name__!r}"
         raise TypeError(msg)
 
 
 def _validate_sync_func_callback_compat(
-    on_exception_callback: AnyExceptionCallback | _Sentinel,
-    on_giveup_callback: AnyExceptionCallback | _Sentinel,
+    *,
+    is_async_func: bool,
+    is_async_retry_callback: bool,
+    is_async_give_up_callback: bool,
 ) -> None:
-    if on_exception_callback is not _MISSING and inspect.iscoroutinefunction(on_exception_callback):
-        msg = "async on_exception_callback cannot be used with a sync function"
-        raise TypeError(msg)
-    if on_giveup_callback is not _MISSING and inspect.iscoroutinefunction(on_giveup_callback):
-        msg = "async on_giveup_callback cannot be used with a sync function"
-        raise TypeError(msg)
+    if not is_async_func:
+        if is_async_retry_callback:
+            msg = "async on_retry_callback cannot be used with a sync function"
+            raise TypeError(msg)
+        if is_async_give_up_callback:
+            msg = "async on_give_up_callback cannot be used with a sync function"
+            raise TypeError(msg)
 
 
 def _validate_retry_params(
-    tries: int,
+    max_attempts: int,
     exceptions: tuple[type[BaseException], ...],
-    timeout: float | _Sentinel,
+    timeout: float,
     default_backoff: BackOff,
-    backoff_by_exception: BackOffByException | _Sentinel,
-    retry_if_exception: RetryIfException | _Sentinel,
-    retry_if_result: RetryIfResult | _Sentinel,
-    on_exception_callback: AnyExceptionCallback | _Sentinel,
-    on_giveup_callback: AnyExceptionCallback | _Sentinel,
+    backoff_by_exception: BackOffByException | None,
+    should_retry: ShouldRetry | None,
+    on_retry_callback: AnyExceptionCallback | None,
+    on_give_up_callback: AnyExceptionCallback | None,
 ) -> None:
-    _validate_tries(tries)
+    _validate_max_attempts(max_attempts)
     _validate_exceptions(exceptions)
     _validate_timeout(timeout)
     _validate_default_backoff(default_backoff)
     _validate_backoff_by_exception(backoff_by_exception)
-    _validate_retry_if_exception(retry_if_exception)
-    _validate_retry_if_result(retry_if_result)
-    _validate_on_exception_callback(on_exception_callback)
-    _validate_on_giveup_callback(on_giveup_callback)
+    _validate_should_retry(should_retry)
+    _validate_on_retry_callback(on_retry_callback)
+    _validate_on_give_up_callback(on_give_up_callback)

@@ -1,70 +1,55 @@
 import time
 from typing import cast
 
-from pytryagain._sentinel import _MISSING, _Sentinel
-from pytryagain._types import (
-    AnyExceptionCallback,
-    AsyncExceptionCallback,
-    RetryIfException,
-    RetryIfResult,
-    SyncExceptionCallback,
-)
+from pytryagain._types import AnyExceptionCallback, AsyncExceptionCallback, BackOffByException, ShouldRetry
+from pytryagain.backoff import BackOff
 
 
-def _compute_deadline(timeout: float | _Sentinel) -> float | None:
-    if timeout is _MISSING:
-        return None
-    return time.monotonic() + cast("float", timeout)
+def _always_retry(_: BaseException) -> bool:
+    return True
 
 
-def _is_timed_out(deadline: float | None) -> bool:
-    return deadline is not None and time.monotonic() >= deadline
+def _noop_exception_callback(_exception: BaseException, _attempt: int) -> None:
+    pass
+
+
+def _get_backoff(
+    default_backoff: BackOff,
+    backoff_by_exception: BackOffByException,
+    exception: BaseException,
+) -> BackOff:
+    for exception_type, backoff in backoff_by_exception.items():
+        if isinstance(exception, exception_type):
+            return backoff
+    return default_backoff
+
+
+def _compute_deadline(timeout: float) -> float:
+    return time.monotonic() + timeout
+
+
+def _is_timed_out(deadline: float) -> bool:
+    return time.monotonic() >= deadline
 
 
 def _should_give_up(
-    attempt: int,
-    tries: int,
-    deadline: float | None,
-    retry_if_exception: RetryIfException | _Sentinel,
-    exc: BaseException,
+    current_attempt: int,
+    max_attempts: int,
+    deadline: float,
+    should_retry: ShouldRetry,
+    exception: BaseException,
 ) -> bool:
-    predicate_stops = retry_if_exception is not _MISSING and not cast("RetryIfException", retry_if_exception)(exc)
-    return attempt >= tries or _is_timed_out(deadline) or predicate_stops
+    return current_attempt >= max_attempts or _is_timed_out(deadline) or not should_retry(exception)
 
 
-def _should_accept_result(
-    retry_if_result: RetryIfResult | _Sentinel,
-    result: object,
-    attempt: int,
-    tries: int,
-    deadline: float | None,
-) -> bool:
-    return (
-        retry_if_result is _MISSING
-        or not cast("RetryIfResult", retry_if_result)(result)
-        or attempt >= tries
-        or _is_timed_out(deadline)
-    )
-
-
-def _invoke_sync_callback(
-    callback: AnyExceptionCallback | _Sentinel,
-    exc: BaseException,
-    attempt: int,
-) -> None:
-    if callback is not _MISSING:
-        cast("SyncExceptionCallback", callback)(exc, attempt)
-
-
-async def _invoke_async_callback(
-    callback: AnyExceptionCallback | _Sentinel,
-    exc: BaseException,
+async def _invoke_callback(
+    callback: AnyExceptionCallback,
+    exception: BaseException,
     attempt: int,
     *,
     is_async: bool,
 ) -> None:
-    if callback is not _MISSING:
-        if is_async:
-            await cast("AsyncExceptionCallback", callback)(exc, attempt)
-        else:
-            cast("SyncExceptionCallback", callback)(exc, attempt)
+    if is_async:
+        await cast("AsyncExceptionCallback", callback)(exception, attempt)
+    else:
+        callback(exception, attempt)

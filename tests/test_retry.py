@@ -23,7 +23,7 @@ class TestSyncRetry:
     def test_retries_then_succeeds(self, patch_sleep: MagicMock) -> None:
         mock_func = MagicMock(side_effect=[ValueError("fail"), ValueError("fail"), 99])
 
-        @retry(tries=3, default_backoff=_BACKOFF)
+        @retry(max_attempts=3, default_backoff=_BACKOFF)
         def unstable_func() -> int:
             return mock_func()
 
@@ -33,7 +33,7 @@ class TestSyncRetry:
         assert patch_sleep.call_count == 2
 
     def test_exhausts_tries_and_raises(self, patch_sleep: MagicMock) -> None:
-        @retry(tries=3, default_backoff=_BACKOFF)
+        @retry(max_attempts=3, default_backoff=_BACKOFF)
         def always_fails() -> None:
             raise ValueError("boom")
 
@@ -43,7 +43,7 @@ class TestSyncRetry:
         assert patch_sleep.call_count == 2
 
     def test_non_matching_exception_propagates_immediately(self, patch_sleep: MagicMock) -> None:
-        @retry(tries=3, default_backoff=_BACKOFF, exceptions=(TypeError,))
+        @retry(max_attempts=3, default_backoff=_BACKOFF, exceptions=(TypeError,))
         def raises_value_error() -> None:
             raise ValueError("not retried")
 
@@ -55,7 +55,7 @@ class TestSyncRetry:
     def test_calls_exception_callback_on_each_retry(self, sync_callback: MagicMock) -> None:
         call_count = 0
 
-        @retry(tries=3, default_backoff=_BACKOFF, on_exception_callback=sync_callback)
+        @retry(max_attempts=3, default_backoff=_BACKOFF, on_retry_callback=sync_callback)
         def fails_twice() -> int:
             nonlocal call_count
             call_count += 1
@@ -69,8 +69,8 @@ class TestSyncRetry:
         assert sync_callback.call_args_list[0][0][1] == 1
         assert sync_callback.call_args_list[1][0][1] == 2
 
-    def test_calls_giveup_callback_on_final_failure(self, sync_callback: MagicMock) -> None:
-        @retry(tries=2, default_backoff=_BACKOFF, on_giveup_callback=sync_callback)
+    def test_calls_give_up_callback_on_final_failure(self, sync_callback: MagicMock) -> None:
+        @retry(max_attempts=2, default_backoff=_BACKOFF, on_give_up_callback=sync_callback)
         def always_fails() -> None:
             raise ValueError("done")
 
@@ -82,16 +82,16 @@ class TestSyncRetry:
         assert isinstance(exc, ValueError)
         assert attempt == 2
 
-    def test_no_giveup_callback_still_raises(self) -> None:
-        @retry(tries=2, default_backoff=_BACKOFF)
+    def test_no_give_up_callback_still_raises(self) -> None:
+        @retry(max_attempts=2, default_backoff=_BACKOFF)
         def always_fails() -> None:
             raise RuntimeError("bare")
 
         with pytest.raises(RuntimeError, match="bare"):
             always_fails()
 
-    def test_retry_if_exception_stops_on_false(self, patch_sleep: MagicMock) -> None:
-        @retry(tries=5, default_backoff=_BACKOFF, retry_if_exception=lambda _: False)
+    def test_should_retry_stops_on_false(self, patch_sleep: MagicMock) -> None:
+        @retry(max_attempts=5, default_backoff=_BACKOFF, should_retry=lambda _: False)
         def always_fails() -> None:
             raise ValueError("stop")
 
@@ -103,7 +103,7 @@ class TestSyncRetry:
     def test_timeout_stops_retrying(self, mocker: MockerFixture, patch_sleep: MagicMock) -> None:
         mocker.patch("pytryagain._utils.time.monotonic", side_effect=[0.0, 100.0])
 
-        @retry(tries=5, default_backoff=_BACKOFF, timeout=30.0)
+        @retry(max_attempts=5, default_backoff=_BACKOFF, timeout=30.0)
         def always_fails() -> None:
             raise ValueError("timeout")
 
@@ -113,19 +113,19 @@ class TestSyncRetry:
         patch_sleep.assert_not_called()
 
     def test_raises_for_async_exception_callback(self) -> None:
-        with pytest.raises(TypeError, match="async on_exception_callback"):
-            retry(tries=2, on_exception_callback=AsyncMock())(lambda: None)
+        with pytest.raises(TypeError, match="async on_retry_callback"):
+            retry(max_attempts=2, on_retry_callback=AsyncMock())(lambda: None)
 
-    def test_raises_for_async_giveup_callback(self) -> None:
-        with pytest.raises(TypeError, match="async on_giveup_callback"):
-            retry(tries=2, on_giveup_callback=AsyncMock())(lambda: None)
+    def test_raises_for_async_give_up_callback(self) -> None:
+        with pytest.raises(TypeError, match="async on_give_up_callback"):
+            retry(max_attempts=2, on_give_up_callback=AsyncMock())(lambda: None)
 
 
 class TestRetryIfException:
     def test_retries_when_predicate_returns_true(self, patch_sleep: MagicMock) -> None:
         call_count = 0
 
-        @retry(tries=3, default_backoff=_BACKOFF, retry_if_exception=lambda e: isinstance(e, ValueError))
+        @retry(max_attempts=3, default_backoff=_BACKOFF, should_retry=lambda e: isinstance(e, ValueError))
         def fails_twice() -> int:
             nonlocal call_count
             call_count += 1
@@ -139,7 +139,7 @@ class TestRetryIfException:
         assert patch_sleep.call_count == 2
 
     def test_stops_immediately_when_predicate_returns_false(self, patch_sleep: MagicMock) -> None:
-        @retry(tries=5, default_backoff=_BACKOFF, retry_if_exception=lambda e: not isinstance(e, RuntimeError))
+        @retry(max_attempts=5, default_backoff=_BACKOFF, should_retry=lambda e: not isinstance(e, RuntimeError))
         def raises_runtime_error() -> None:
             raise RuntimeError("do not retry")
 
@@ -148,12 +148,12 @@ class TestRetryIfException:
 
         patch_sleep.assert_not_called()
 
-    def test_calls_giveup_callback_when_predicate_stops_retry(self, sync_callback: MagicMock) -> None:
+    def test_calls_give_up_callback_when_predicate_stops_retry(self, sync_callback: MagicMock) -> None:
         @retry(
-            tries=5,
+            max_attempts=5,
             default_backoff=_BACKOFF,
-            retry_if_exception=lambda _: False,
-            on_giveup_callback=sync_callback,
+            should_retry=lambda _: False,
+            on_give_up_callback=sync_callback,
         )
         def always_fails() -> None:
             raise ValueError("fatal")
@@ -164,108 +164,6 @@ class TestRetryIfException:
         sync_callback.assert_called_once()
 
 
-class TestRetryIfResult:
-    def test_retries_when_result_predicate_returns_true(self, patch_sleep: MagicMock) -> None:
-        call_count = 0
-
-        @retry(tries=3, default_backoff=_BACKOFF, retry_if_result=lambda x: x != 42)
-        def eventually_returns_42() -> int:
-            nonlocal call_count
-            call_count += 1
-            return 42 if call_count >= 3 else 0
-
-        result = eventually_returns_42()
-
-        assert result == 42
-        assert patch_sleep.call_count == 2
-
-    def test_returns_last_result_when_tries_exhausted(self, patch_sleep: MagicMock) -> None:
-        @retry(tries=3, default_backoff=_BACKOFF, retry_if_result=lambda x: x != 42)
-        def always_returns_zero() -> int:
-            return 0
-
-        result = always_returns_zero()
-
-        assert result == 0
-        assert patch_sleep.call_count == 2
-
-    def test_accepts_result_immediately_when_predicate_false(self, patch_sleep: MagicMock) -> None:
-        @retry(tries=5, default_backoff=_BACKOFF, retry_if_result=lambda x: x < 0)
-        def returns_positive() -> int:
-            return 10
-
-        result = returns_positive()
-
-        assert result == 10
-        patch_sleep.assert_not_called()
-
-    def test_result_predicate_with_complex_object(self, patch_sleep: MagicMock) -> None:
-        class Response:
-            def __init__(self, status: int) -> None:
-                self.status = status
-
-        call_count = 0
-
-        @retry(tries=3, default_backoff=_BACKOFF, retry_if_result=lambda r: r.status == 503)
-        def fetch() -> Response:
-            nonlocal call_count
-            call_count += 1
-            return Response(503 if call_count < 3 else 200)
-
-        result = fetch()
-
-        assert result.status == 200
-        assert patch_sleep.call_count == 2
-
-    def test_timeout_stops_result_retry(self, mocker: MockerFixture, patch_sleep: MagicMock) -> None:
-        mocker.patch("pytryagain._utils._is_timed_out", return_value=True)
-
-        @retry(tries=5, default_backoff=_BACKOFF, timeout=30.0, retry_if_result=lambda x: x != 42)
-        def always_returns_zero() -> int:
-            return 0
-
-        result = always_returns_zero()
-
-        assert result == 0
-        patch_sleep.assert_not_called()
-
-    async def test_async_timeout_stops_result_retry(self, mocker: MockerFixture, patch_async_sleep: AsyncMock) -> None:
-        mocker.patch("pytryagain._utils._is_timed_out", return_value=True)
-
-        @retry(tries=5, default_backoff=_BACKOFF, timeout=30.0, retry_if_result=lambda x: x != 42)
-        async def always_returns_zero() -> int:
-            return 0
-
-        result = await always_returns_zero()
-
-        assert result == 0
-        patch_async_sleep.assert_not_called()
-
-    async def test_async_retries_when_result_predicate_returns_true(self, patch_async_sleep: AsyncMock) -> None:
-        call_count = 0
-
-        @retry(tries=3, default_backoff=_BACKOFF, retry_if_result=lambda x: x != 99)
-        async def eventually_returns_99() -> int:
-            nonlocal call_count
-            call_count += 1
-            return 99 if call_count >= 3 else 0
-
-        result = await eventually_returns_99()
-
-        assert result == 99
-        assert patch_async_sleep.call_count == 2
-
-    async def test_async_returns_last_result_when_tries_exhausted(self, patch_async_sleep: AsyncMock) -> None:
-        @retry(tries=3, default_backoff=_BACKOFF, retry_if_result=lambda x: x != 42)
-        async def always_returns_zero() -> int:
-            return 0
-
-        result = await always_returns_zero()
-
-        assert result == 0
-        assert patch_async_sleep.call_count == 2
-
-
 class TestBackoffByException:
     def test_uses_exception_specific_backoff(self, mocker: MockerFixture) -> None:
         sleep_mock = mocker.patch("pytryagain._retry.time.sleep")
@@ -273,7 +171,7 @@ class TestBackoffByException:
         call_count = 0
 
         @retry(
-            tries=2,
+            max_attempts=2,
             default_backoff=_BACKOFF,
             backoff_by_exception={ValueError: specific_backoff},
         )
@@ -293,7 +191,7 @@ class TestBackoffByException:
         call_count = 0
 
         @retry(
-            tries=2,
+            max_attempts=2,
             default_backoff=ConstantBackoff(delay=2.0),
             backoff_by_exception={TypeError: ConstantBackoff(delay=9.0)},
         )
@@ -314,7 +212,7 @@ class TestBackoffByException:
         call_count = 0
 
         @retry(
-            tries=2,
+            max_attempts=2,
             default_backoff=_BACKOFF,
             backoff_by_exception={OSError: specific_backoff},
         )
@@ -331,17 +229,17 @@ class TestBackoffByException:
 
 
 class TestValidation:
-    def test_raises_for_tries_less_than_one(self) -> None:
-        with pytest.raises(ValueError, match="tries must be >= 1"):
-            retry(tries=0)(lambda: None)
+    def test_raises_for_max_attempts_less_than_one(self) -> None:
+        with pytest.raises(ValueError, match="max_attempts must be >= 1"):
+            retry(max_attempts=0)(lambda: None)
 
-    def test_raises_for_tries_not_int(self) -> None:
-        with pytest.raises(TypeError, match="tries must be int"):
-            retry(tries=1.5)(lambda: None)  # type: ignore[arg-type]
+    def test_raises_for_max_attempts_not_int(self) -> None:
+        with pytest.raises(TypeError, match="max_attempts must be int"):
+            retry(max_attempts=1.5)(lambda: None)  # type: ignore[arg-type]
 
-    def test_raises_for_tries_bool(self) -> None:
-        with pytest.raises(TypeError, match="tries must be int"):
-            retry(tries=True)(lambda: None)  # type: ignore[arg-type]
+    def test_raises_for_max_attempts_bool(self) -> None:
+        with pytest.raises(TypeError, match="max_attempts must be int"):
+            retry(max_attempts=True)(lambda: None)  # type: ignore[arg-type]
 
     def test_raises_for_non_positive_timeout(self) -> None:
         with pytest.raises(ValueError, match="timeout must be > 0"):
@@ -383,26 +281,22 @@ class TestValidation:
         with pytest.raises(TypeError, match="backoff_by_exception values must implement BackOff protocol"):
             retry(backoff_by_exception={ValueError: "fast"})(lambda: None)  # type: ignore[arg-type]
 
-    def test_raises_for_retry_if_exception_not_callable(self) -> None:
-        with pytest.raises(TypeError, match="retry_if_exception must be callable"):
-            retry(retry_if_exception="not_callable")(lambda: None)  # type: ignore[arg-type]
+    def test_raises_for_should_retry_not_callable(self) -> None:
+        with pytest.raises(TypeError, match="should_retry must be callable"):
+            retry(should_retry="not_callable")(lambda: None)  # type: ignore[arg-type]
 
-    def test_raises_for_retry_if_result_not_callable(self) -> None:
-        with pytest.raises(TypeError, match="retry_if_result must be callable"):
-            retry(retry_if_result=42)(lambda: None)  # type: ignore[arg-type]
+    def test_raises_for_on_retry_callback_not_callable(self) -> None:
+        with pytest.raises(TypeError, match="on_retry_callback must be callable"):
+            retry(on_retry_callback=123)(lambda: None)  # type: ignore[arg-type]
 
-    def test_raises_for_on_exception_callback_not_callable(self) -> None:
-        with pytest.raises(TypeError, match="on_exception_callback must be callable"):
-            retry(on_exception_callback=123)(lambda: None)  # type: ignore[arg-type]
-
-    def test_raises_for_on_giveup_callback_not_callable(self) -> None:
-        with pytest.raises(TypeError, match="on_giveup_callback must be callable"):
-            retry(on_giveup_callback=123)(lambda: None)  # type: ignore[arg-type]
+    def test_raises_for_on_give_up_callback_not_callable(self) -> None:
+        with pytest.raises(TypeError, match="on_give_up_callback must be callable"):
+            retry(on_give_up_callback=123)(lambda: None)  # type: ignore[arg-type]
 
 
 class TestDecoratorFactory:
     def test_factory_mode(self) -> None:
-        decorator = retry(tries=2, default_backoff=_BACKOFF)
+        decorator = retry(max_attempts=2, default_backoff=_BACKOFF)
 
         @decorator
         def always_fails() -> None:
@@ -426,7 +320,7 @@ class TestAsyncRetry:
     async def test_retries_then_succeeds(self, patch_async_sleep: AsyncMock) -> None:
         call_count = 0
 
-        @retry(tries=3, default_backoff=_BACKOFF)
+        @retry(max_attempts=3, default_backoff=_BACKOFF)
         async def unstable_func() -> int:
             nonlocal call_count
             call_count += 1
@@ -440,7 +334,7 @@ class TestAsyncRetry:
         assert patch_async_sleep.call_count == 2
 
     async def test_exhausts_tries_and_raises(self, patch_async_sleep: AsyncMock) -> None:
-        @retry(tries=3, default_backoff=_BACKOFF)
+        @retry(max_attempts=3, default_backoff=_BACKOFF)
         async def always_fails() -> None:
             raise ValueError("async boom")
 
@@ -452,7 +346,7 @@ class TestAsyncRetry:
     async def test_sync_exception_callback(self, sync_callback: MagicMock) -> None:
         call_count = 0
 
-        @retry(tries=3, default_backoff=_BACKOFF, on_exception_callback=sync_callback)
+        @retry(max_attempts=3, default_backoff=_BACKOFF, on_retry_callback=sync_callback)
         async def fails_twice() -> int:
             nonlocal call_count
             call_count += 1
@@ -467,7 +361,7 @@ class TestAsyncRetry:
     async def test_async_exception_callback(self, async_callback: AsyncMock) -> None:
         call_count = 0
 
-        @retry(tries=3, default_backoff=_BACKOFF, on_exception_callback=async_callback)
+        @retry(max_attempts=3, default_backoff=_BACKOFF, on_retry_callback=async_callback)
         async def fails_twice() -> int:
             nonlocal call_count
             call_count += 1
@@ -479,8 +373,8 @@ class TestAsyncRetry:
 
         assert async_callback.call_count == 2
 
-    async def test_sync_giveup_callback(self, sync_callback: MagicMock) -> None:
-        @retry(tries=2, default_backoff=_BACKOFF, on_giveup_callback=sync_callback)
+    async def test_sync_give_up_callback(self, sync_callback: MagicMock) -> None:
+        @retry(max_attempts=2, default_backoff=_BACKOFF, on_give_up_callback=sync_callback)
         async def always_fails() -> None:
             raise ValueError("giveup")
 
@@ -489,8 +383,8 @@ class TestAsyncRetry:
 
         sync_callback.assert_called_once()
 
-    async def test_async_giveup_callback(self, async_callback: AsyncMock) -> None:
-        @retry(tries=2, default_backoff=_BACKOFF, on_giveup_callback=async_callback)
+    async def test_async_give_up_callback(self, async_callback: AsyncMock) -> None:
+        @retry(max_attempts=2, default_backoff=_BACKOFF, on_give_up_callback=async_callback)
         async def always_fails() -> None:
             raise ValueError("async giveup")
 
@@ -499,16 +393,16 @@ class TestAsyncRetry:
 
         async_callback.assert_called_once()
 
-    async def test_no_giveup_callback_still_raises(self) -> None:
-        @retry(tries=2, default_backoff=_BACKOFF)
+    async def test_no_give_up_callback_still_raises(self) -> None:
+        @retry(max_attempts=2, default_backoff=_BACKOFF)
         async def always_fails() -> None:
             raise RuntimeError("no cb")
 
         with pytest.raises(RuntimeError, match="no cb"):
             await always_fails()
 
-    async def test_retry_if_exception_stops_on_false(self, patch_async_sleep: AsyncMock) -> None:
-        @retry(tries=5, default_backoff=_BACKOFF, retry_if_exception=lambda _: False)
+    async def test_should_retry_stops_on_false(self, patch_async_sleep: AsyncMock) -> None:
+        @retry(max_attempts=5, default_backoff=_BACKOFF, should_retry=lambda _: False)
         async def always_fails() -> None:
             raise ValueError("stop async")
 
