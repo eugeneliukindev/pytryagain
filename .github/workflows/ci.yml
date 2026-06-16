@@ -13,6 +13,7 @@ jobs:
   lint:
     name: Ruff
     runs-on: ubuntu-latest
+    if: github.event_name != 'push'
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v7
@@ -24,6 +25,7 @@ jobs:
   typecheck:
     name: Mypy
     runs-on: ubuntu-latest
+    if: github.event_name != 'push'
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v7
@@ -35,6 +37,7 @@ jobs:
   file_checks:
     name: File checks (pre-commit)
     runs-on: ubuntu-latest
+    if: github.event_name != 'push'
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v7
@@ -86,6 +89,7 @@ jobs:
   pkg_meta:
     name: Package metadata
     runs-on: ubuntu-latest
+    if: github.event_name != 'push'
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v7
