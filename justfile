@@ -6,16 +6,16 @@ _default:
     @just --list --unsorted --list-heading $'Available commands…\n'
 
 
-[doc("Ruff format + check")]
+[doc("Ruff lint + format check")]
 [group("linter")]
 lint:
-    uv run --group lint ruff format --check
-    uv run --group lint ruff check
+    uv run --locked --group hooks pre-commit run ruff --all-files
+    uv run --locked --group hooks pre-commit run ruff-format --all-files
 
 [doc("Mypy check")]
 [group("static analysis")]
 typecheck:
-    uv run --group typecheck mypy src/
+    uv run --locked --group hooks pre-commit run mypy --all-files
 
 [doc("Run tests")]
 [group("tests")]
