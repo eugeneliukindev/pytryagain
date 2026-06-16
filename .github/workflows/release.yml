@@ -4,12 +4,20 @@ on:
   push:
     tags:
       - "v*.*.*"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release (e.g., 0.3.0)'
+        required: true
+        type: string
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
+        with:
+          ref: v${{ github.event.inputs.version || github.ref_name }}
       - uses: astral-sh/setup-uv@v7
         with:
           enable-cache: true
