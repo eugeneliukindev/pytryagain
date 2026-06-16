@@ -64,9 +64,13 @@ check_build:
     uv run --locked --group pkg-check twine check dist/*.whl dist/*.tar.gz
     uv run --locked --group pkg-check check-wheel-contents --no-config dist/*.whl
 
-[doc("Clean, build, and validate package")]
+[doc("Clean, build, validate, and clean package")]
 [group("build")]
-pkg_meta: clean build check_build
+pkg_meta:
+    just clean
+    just build
+    just check_build
+    just clean
 
 
 # — infra ————————————————————————————————————————————————————————————————————
