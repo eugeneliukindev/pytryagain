@@ -1,3 +1,6 @@
+# Single source of truth for all checks: pre-commit hooks and CI jobs both delegate here,
+# so tool flags and behaviour are always in sync across local commits and the pipeline.
+
 set shell := ["sh", "-c"]
 
 export VIRTUAL_ENV := ".venv"
@@ -8,13 +11,21 @@ _default:
 
 # — linting ——————————————————————————————————————————————————————————————————
 
-[doc("Format and auto-fix with ruff")]
+[doc("Auto-format with ruff")]
 [group("linter")]
-fmt:
+format:
     uv run --locked --group lint ruff format
+
+[doc("Lint and auto-fix with ruff")]
+[group("linter")]
+fix:
     uv run --locked --group lint ruff check --fix
 
-[doc("Check lint and format (no auto-fix)")]
+[doc("Format + fix (local dev shortcut)")]
+[group("linter")]
+check: format fix
+
+[doc("Check lint and format without modifications (CI)")]
 [group("linter")]
 lint:
     uv run --locked --group lint ruff format --check
@@ -24,6 +35,16 @@ lint:
 [group("linter")]
 typecheck:
     uv run --locked --group typecheck mypy
+
+[doc("Check single commit message (used by pre-commit commit-msg hook)")]
+[group("linter")]
+commitizen msg_file:
+    uv run --locked --group hooks cz check --commit-msg-file {{msg_file}}
+
+[doc("Check commits in range follow Conventional Commits (CI only)")]
+[group("linter")]
+check-commits range:
+    uv run --locked --group hooks cz check --rev-range {{range}}
 
 [doc("Run pre-commit file checks (excludes ruff and mypy)")]
 [group("linter")]
@@ -76,8 +97,8 @@ pkg_meta:
 # — infra ————————————————————————————————————————————————————————————————————
 
 [doc("Run all CI checks locally")]
-[group("infra")]
-ci: lint typecheck file_checks pkg_meta test
+[group("ci")]
+ci: lint typecheck file_checks pkg_meta nox
 
 [doc("Release a new version: just release patch|minor|major")]
 [group("infra")]
