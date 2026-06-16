@@ -107,4 +107,3 @@ ci: lint typecheck file_checks check-commits pkg_meta nox
 release increment="":
     uv run --locked --group hooks cz bump {{increment}}
     git push && git push --tags
-    just clean
