@@ -97,7 +97,7 @@ skip_covered = true
 [tool.commitizen]
 tag_format = "v$version"
 version_scheme = "semver"
-version_provider = "pep621"
+version_provider = "uv"
 
 [tool.mypy]
 mypy_path = "src"

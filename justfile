@@ -94,21 +94,26 @@ pkg_meta:
     just clean
 
 
-# — infra ————————————————————————————————————————————————————————————————————
+# — ci ————————————————————————————————————————————————————————————————————
 
 [doc("Run all CI checks locally")]
 [group("ci")]
 [parallel]
 ci: lint typecheck file_checks check-commits pkg_meta nox
 
-[doc("Release a new version: just release patch|minor|major")]
-[group("infra")]
+# — cd ————————————————————————————————————————————————————————————————————
+
+[doc("Bump version via commitizen (used by CD and just release)")]
+[group("cd")]
+bump *args:
+    uv run --locked --group hooks cz bump {{args}}
+
+# — release ————————————————————————————————————————————————————————————————————
+
+[doc("Manually bump and push tag (auto: CD does this on merge to main)")]
+[group("release")]
 [confirm("Release to PyPI?")]
-release bump="patch":
-    uv version --bump {{bump}}
-    just build
-    git add pyproject.toml uv.lock
-    git commit -m "chore: bump version to $(uv version --short)"
-    git tag "v$(uv version --short)"
+release *args:
+    just bump {{args}}
     git push && git push --tags
     just clean
