@@ -94,20 +94,24 @@ pkg_meta:
     just clean
 
 
-# — infra ————————————————————————————————————————————————————————————————————
+# — ci ————————————————————————————————————————————————————————————————————
 
 [doc("Run all CI checks locally")]
 [group("ci")]
 [parallel]
 ci: lint typecheck file_checks check-commits pkg_meta nox
 
+# — cd ————————————————————————————————————————————————————————————————————
+
 [doc("Bump version via commitizen (used by CD and just release)")]
-[group("infra")]
+[group("cd")]
 bump *args:
     uv run --locked --group hooks cz bump {{args}}
 
+# — release ————————————————————————————————————————————————————————————————————
+
 [doc("Manually bump and push tag (auto: CD does this on merge to main)")]
-[group("infra")]
+[group("release")]
 [confirm("Release to PyPI?")]
 release *args:
     just bump {{args}}
