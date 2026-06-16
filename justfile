@@ -30,7 +30,7 @@ check: lint typecheck test
 [doc("Run tests across Python 3.10–3.13 via nox")]
 [group("tests")]
 nox *args:
-    uvx nox {{args}}
+    uv run --group nox nox {{args}}
 
 [doc("Release a new version: just release patch|minor|major")]
 [group("release")]
