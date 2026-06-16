@@ -32,7 +32,7 @@ jobs:
       - uses: extractions/setup-just@v2
       - run: just nox -s typecheck
 
-  pre_commit:
+  file_checks:
     name: File checks (pre-commit)
     runs-on: ubuntu-latest
     steps:
@@ -41,7 +41,7 @@ jobs:
         with:
           enable-cache: true
       - uses: extractions/setup-just@v2
-      - run: just nox -s pre_commit
+      - run: just nox -s file_checks
 
   commitizen:
     name: Commit message lint
