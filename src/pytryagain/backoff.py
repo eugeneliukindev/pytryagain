@@ -1,8 +1,9 @@
 import random
 from dataclasses import dataclass
-from typing import Protocol
+from typing import Protocol, runtime_checkable
 
 
+@runtime_checkable
 class BackOff(Protocol):
     def __call__(self, attempt: int) -> float: ...
 
