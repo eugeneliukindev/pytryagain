@@ -28,20 +28,32 @@ typecheck:
 file_checks:
     SKIP=ruff,ruff-format,mypy uv run --locked --group hooks pre-commit run --all-files --show-diff-on-failure
 
-[doc("Build and validate package metadata")]
+[doc("Remove build artifacts")]
 [group("infra")]
-pkg_meta:
-    #!/usr/bin/env sh
-    tmp=$(mktemp -d)
-    uv build --sdist --wheel --out-dir "$tmp"
-    uv run --locked --group pkg-check twine check "$tmp"/*.whl "$tmp"/*.tar.gz
-    uv run --locked --group pkg-check check-wheel-contents --no-config "$tmp"/*.whl
-    rm -rf "$tmp"
+clean:
+    rm -rf dist/
+
+[doc("Build sdist and wheel into dist/")]
+[group("infra")]
+build:
+    uv build --sdist --wheel --out-dir dist/
+
+[doc("Validate package metadata and wheel contents")]
+[group("infra")]
+check_build:
+    uv run --locked --group pkg-check twine check dist/*.whl dist/*.tar.gz
+    uv run --locked --group pkg-check check-wheel-contents --no-config dist/*.whl
+
+[doc("Clean, build, and validate package")]
+[group("infra")]
+pkg_meta: clean build check_build
 
 [doc("Run tests")]
 [group("tests")]
 test *args:
     uv run --locked --group tests pytest {{args}}
+
+alias tests := test
 
 [doc("Run tests across Python 3.10–3.15 via nox")]
 [group("tests")]
@@ -59,6 +71,7 @@ release bump="patch":
     just lint
     just typecheck
     uv version --bump {{bump}}
+    just build
     git add pyproject.toml uv.lock
     git commit -m "chore: bump version to $(uv version --short)"
     git tag "v$(uv version --short)"
