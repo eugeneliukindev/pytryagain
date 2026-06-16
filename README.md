@@ -3,8 +3,9 @@
 **A lightweight, zero-dependency retry decorator for sync and async Python functions.**
 
 [![CI](https://github.com/eugeneliukindev/pytryagain/actions/workflows/ci.yml/badge.svg)](https://github.com/eugeneliukindev/pytryagain/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/eugeneliukindev/pytryagain/branch/main/graph/badge.svg)](https://codecov.io/gh/eugeneliukindev/pytryagain)
 [![PyPI](https://img.shields.io/pypi/v/pytryagain)](https://pypi.org/project/pytryagain/)
-[![Python](https://img.shields.io/pypi/pyversions/pytryagain)](https://pypi.org/project/pytryagain/)
+[![Python](https://img.shields.io/badge/python-3.10_%7C_3.11_%7C_3.12_%7C_3.13_%7C_3.14_%7C_3.15-blue)](https://pypi.org/project/pytryagain/)
 [![License](https://img.shields.io/github/license/eugeneliukindev/pytryagain)](LICENSE)
 
 ---
@@ -246,12 +247,12 @@ async def process_job(job_id: str) -> None:
 retry(
     func=...,
     tries=3,
-    backoff=ExponentialJitterBackoff(),
     exceptions=(Exception,),
+    timeout=...,
+    backoff=ExponentialJitterBackoff(),
+    retry_if=...,
     on_exception_callback=...,
     on_giveup_callback=...,
-    retry_if=...,
-    timeout=...,
 )
 ```
 
@@ -259,12 +260,12 @@ retry(
 |---|---|---|---|
 | `func` | `Callable` | — | Function to wrap. Omit to use as a decorator factory. |
 | `tries` | `int` | `3` | Total attempts including the first call. `tries=1` means no retries. |
-| `backoff` | `BackOff` | `ExponentialJitterBackoff()` | Delay strategy between attempts. |
 | `exceptions` | `tuple[type[BaseException], ...]` | `(Exception,)` | Exception types that trigger a retry. |
+| `timeout` | `float` | — | Total time budget in seconds across all attempts. |
+| `backoff` | `BackOff` | `ExponentialJitterBackoff()` | Delay strategy between attempts. |
+| `retry_if` | `Callable[[BaseException], bool]` | — | Predicate to decide whether to retry. `False` re-raises immediately. |
 | `on_exception_callback` | `Callable[[BaseException, int], None]` | — | Called after each failed attempt except the last. |
 | `on_giveup_callback` | `Callable[[BaseException, int], None]` | — | Called once when all attempts are exhausted. |
-| `retry_if` | `Callable[[BaseException], bool]` | — | Predicate to decide whether to retry. `False` re-raises immediately. |
-| `timeout` | `float` | — | Total time budget in seconds across all attempts. |
 
 ---
 
