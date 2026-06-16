@@ -41,9 +41,9 @@ typecheck:
 commitizen msg_file:
     uv run --locked --group hooks cz check --commit-msg-file {{msg_file}}
 
-[doc("Check commits in range follow Conventional Commits (CI only)")]
+[doc("Check commits in range follow Conventional Commits")]
 [group("linter")]
-check-commits range:
+check-commits range="origin/main..HEAD":
     uv run --locked --group hooks cz check --rev-range {{range}}
 
 [doc("Run pre-commit file checks (excludes ruff and mypy)")]
@@ -98,7 +98,7 @@ pkg_meta:
 
 [doc("Run all CI checks locally")]
 [group("ci")]
-ci: lint typecheck file_checks pkg_meta nox
+ci: lint typecheck file_checks check-commits pkg_meta nox
 
 [doc("Release a new version: just release patch|minor|major")]
 [group("infra")]
