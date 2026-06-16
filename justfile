@@ -101,9 +101,14 @@ pkg_meta:
 [parallel]
 ci: lint typecheck file_checks check-commits pkg_meta nox
 
-[doc("Manually bump version and push tag (auto: CD does this on merge to main)")]
+[doc("Bump version via commitizen (used by CD and just release)")]
+[group("infra")]
+bump *args:
+    uv run --locked --group hooks cz bump {{args}}
+
+[doc("Manually bump and push tag (auto: CD does this on merge to main)")]
 [group("infra")]
 [confirm("Release to PyPI?")]
-release increment="":
-    uv run --locked --group hooks cz bump {{increment}}
+release *args:
+    just bump {{args}}
     git push && git push --tags

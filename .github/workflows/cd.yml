@@ -17,7 +17,7 @@ jobs:
           enable-cache: true
       - uses: extractions/setup-just@v4
       - name: Preview version bump
-        run: uv run --locked --group hooks cz bump --dry-run
+        run: just bump --dry-run
 
   bump:
     runs-on: ubuntu-latest
@@ -30,8 +30,9 @@ jobs:
         with:
           fetch-depth: 0
           token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
-      - uses: commitizen-tools/commitizen-action@master
+      - uses: astral-sh/setup-uv@v7
         with:
-          github_token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
-          push: true
-          on_bump_error: warn
+          enable-cache: true
+      - uses: extractions/setup-just@v4
+      - run: just bump
+      - run: git push && git push --tags
