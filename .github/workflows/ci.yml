@@ -10,15 +10,6 @@ on:
   workflow_dispatch:
 
 jobs:
-  commitizen:
-    name: Commit message lint
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - uses: wagoid/commitlint-github-action@v6
-
   lint:
     name: Ruff
     runs-on: ubuntu-latest
@@ -40,6 +31,26 @@ jobs:
           enable-cache: true
       - uses: extractions/setup-just@v2
       - run: just nox -s typecheck
+
+  pre_commit:
+    name: File checks (pre-commit)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+      - uses: extractions/setup-just@v2
+      - run: just nox -s pre_commit
+
+  commitizen:
+    name: Commit message lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: wagoid/commitlint-github-action@v6
 
   tests:
     name: Tests (Python ${{ matrix.python }}, ${{ matrix.os }})
