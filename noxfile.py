@@ -32,7 +32,7 @@ def lint(session: nox.Session) -> None:
 @nox.session(venv_backend="none")
 def typecheck(session: nox.Session) -> None:
     session.log("Running mypy in strict mode")
-    session.run("uv", "run", "--locked", "--group=typecheck", "mypy", "src/", external=True)
+    session.run("uv", "run", "--locked", "--group=typecheck", "mypy", external=True)
 
 
 @nox.session(venv_backend="none")

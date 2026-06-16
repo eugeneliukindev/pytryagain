@@ -89,7 +89,7 @@ repos:
 
       - id: mypy
         name: Type check with mypy
-        entry: uv run --locked --group typecheck mypy src/
+        entry: uv run --locked --group typecheck mypy
         language: unsupported
         types: [python]
         pass_filenames: false

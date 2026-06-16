@@ -95,6 +95,7 @@ skip_covered = true
 
 [tool.mypy]
 mypy_path = "src"
+files = ["src"]
 strict = true
 strict_bytes = true
 strict_equality_for_none = true
