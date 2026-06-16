@@ -46,11 +46,16 @@ jobs:
   commitizen:
     name: Commit message lint
     runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - uses: wagoid/commitlint-github-action@v6
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+      - uses: extractions/setup-just@v2
+      - run: just check-commits "${{ github.event.pull_request.base.sha }}..${{ github.sha }}"
 
   tests:
     name: Tests (Python ${{ matrix.python }}, ${{ matrix.os }})

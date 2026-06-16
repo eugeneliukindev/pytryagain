@@ -1,0 +1,22 @@
+name: CD
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  bump:
+    runs-on: ubuntu-latest
+    if: "!startsWith(github.event.head_commit.message, 'bump:')"
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+      - uses: commitizen-tools/commitizen-action@master
+        with:
+          github_token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+          push: true
+          on_bump_error: warn
