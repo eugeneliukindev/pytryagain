@@ -37,7 +37,7 @@ nox *args:
 [confirm("Release to PyPI?")]
 release bump="patch":
     uv run --group lint ruff check src/
-    uv run --group typing mypy src/
+    uv run --group typecheck mypy src/
     uv version --bump {{bump}}
     git add pyproject.toml uv.lock
     git commit -m "chore: bump version to $(uv version --short)"
