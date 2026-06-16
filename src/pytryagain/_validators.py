@@ -1,3 +1,4 @@
+import inspect
 from collections.abc import Mapping
 from typing import cast
 
@@ -80,6 +81,18 @@ def _validate_on_exception_callback(on_exception_callback: object) -> None:
 def _validate_on_giveup_callback(on_giveup_callback: object) -> None:
     if on_giveup_callback is not _MISSING and not callable(on_giveup_callback):
         msg = f"on_giveup_callback must be callable, got {type(on_giveup_callback).__name__!r}"
+        raise TypeError(msg)
+
+
+def _validate_sync_func_callback_compat(
+    on_exception_callback: AnyExceptionCallback | _Sentinel,
+    on_giveup_callback: AnyExceptionCallback | _Sentinel,
+) -> None:
+    if on_exception_callback is not _MISSING and inspect.iscoroutinefunction(on_exception_callback):
+        msg = "async on_exception_callback cannot be used with a sync function"
+        raise TypeError(msg)
+    if on_giveup_callback is not _MISSING and inspect.iscoroutinefunction(on_giveup_callback):
+        msg = "async on_giveup_callback cannot be used with a sync function"
         raise TypeError(msg)
 
 

@@ -20,7 +20,7 @@ from ._utils import (
     _should_accept_result,
     _should_give_up,
 )
-from ._validators import _validate_retry_params
+from ._validators import _validate_retry_params, _validate_sync_func_callback_compat
 from .backoff import BackOff, ExponentialJitterBackoff
 
 _P = ParamSpec("_P")
@@ -178,12 +178,8 @@ def retry(
     is_async_callback = on_exception_callback is not _MISSING and inspect.iscoroutinefunction(on_exception_callback)
     is_async_giveup = on_giveup_callback is not _MISSING and inspect.iscoroutinefunction(on_giveup_callback)
 
-    if not is_async_func and is_async_callback:
-        msg = "async on_exception_callback cannot be used with a sync function"
-        raise TypeError(msg)
-    if not is_async_func and is_async_giveup:
-        msg = "async on_giveup_callback cannot be used with a sync function"
-        raise TypeError(msg)
+    if not is_async_func:
+        _validate_sync_func_callback_compat(on_exception_callback, on_giveup_callback)
 
     @wraps(typed_func)
     def sync_wrapper(*args: _P.args, **kwargs: _P.kwargs) -> _T:  # type: ignore[return]
