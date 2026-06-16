@@ -44,8 +44,14 @@ def typecheck(session: nox.Session) -> None:
 @nox.session
 def pre_commit(session: nox.Session) -> None:
     _install(session, "hooks")
-    session.log("Running pre-commit hooks on all files")
-    session.run("pre-commit", "run", "--all-files", "--show-diff-on-failure")
+    session.log("Running pre-commit file-check hooks on all files")
+    session.run(
+        "pre-commit",
+        "run",
+        "--all-files",
+        "--show-diff-on-failure",
+        env={"SKIP": "ruff,ruff-format,mypy"},
+    )
 
 
 @nox.session

@@ -51,33 +51,6 @@ repos:
       - id: trailing-whitespace
         name: Trim trailing whitespace
 
-  - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.15.16
-    hooks:
-      - id: ruff
-        name: Lint with ruff
-
-      - id: ruff-format
-        name: Format with ruff
-
-  - repo: https://github.com/astral-sh/uv-pre-commit
-    rev: 0.11.18
-    hooks:
-      - id: uv-lock
-        name: Check uv.lock is in sync with pyproject.toml
-
-      - id: uv-export
-        name: Export dev dependencies
-        args:
-          - "--frozen"
-          - "--all-groups"
-          - "--output-file=requirements.dev.txt"
-          - "--quiet"
-          - "--no-annotate"
-          - "--no-hashes"
-          - "--no-header"
-        files: ^uv\.lock$
-
   - repo: https://github.com/commitizen-tools/commitizen
     rev: v4.8.3
     hooks:
@@ -87,9 +60,34 @@ repos:
 
   - repo: local
     hooks:
+      - id: uv-lock
+        name: Check uv.lock is in sync with pyproject.toml
+        entry: uv lock --check
+        language: unsupported
+        pass_filenames: false
+
+      - id: uv-export
+        name: Export dev dependencies
+        entry: uv export --locked --all-groups --output-file=requirements.dev.txt --quiet --no-annotate --no-hashes --no-header
+        language: unsupported
+        pass_filenames: false
+        files: ^uv\.lock$
+
+      - id: ruff
+        name: Lint with ruff
+        entry: uv run --locked --group lint ruff check --fix
+        language: unsupported
+        types: [python]
+
+      - id: ruff-format
+        name: Format with ruff
+        entry: uv run --locked --group lint ruff format
+        language: unsupported
+        types: [python]
+
       - id: mypy
         name: Type check with mypy
-        entry: uv run --frozen --group typecheck mypy src/
-        language: system
+        entry: uv run --locked --group typecheck mypy src/
+        language: unsupported
         types: [python]
         pass_filenames: false
