@@ -27,7 +27,7 @@ jobs:
       - uses: astral-sh/setup-uv@v6
         with:
           enable-cache: true
-      - uses: extractions/setup-just@v2
+      - uses: extractions/setup-just@v4
       - run: just nox -s lint
 
   typecheck:
@@ -38,7 +38,7 @@ jobs:
       - uses: astral-sh/setup-uv@v6
         with:
           enable-cache: true
-      - uses: extractions/setup-just@v2
+      - uses: extractions/setup-just@v4
       - run: just nox -s typecheck
 
   tests:
@@ -55,7 +55,7 @@ jobs:
         with:
           enable-cache: true
           python-version: ${{ matrix.python }}
-      - uses: extractions/setup-just@v2
+      - uses: extractions/setup-just@v4
       - run: just nox -s tests-${{ matrix.python }}
       - name: Upload coverage reports to Codecov
         uses: codecov/codecov-action@v5
@@ -74,5 +74,5 @@ jobs:
       - uses: astral-sh/setup-uv@v6
         with:
           enable-cache: true
-      - uses: extractions/setup-just@v2
+      - uses: extractions/setup-just@v4
       - run: just nox -s pkg_meta
