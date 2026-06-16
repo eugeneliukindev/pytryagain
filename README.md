@@ -97,15 +97,17 @@ Apply a shared retry policy across multiple functions:
 from pytryagain import retry
 from pytryagain.backoff import ConstantBackoff
 
-http_retry = retry(tries=4, backoff=ConstantBackoff(delay=1.0))
+http_retry = retry(tries=4, default_backoff=ConstantBackoff(delay=1.0))
+
 
 @http_retry
 def get_orders() -> list:
-    ...
+  ...
+
 
 @http_retry
 def get_inventory() -> list:
-    ...
+  ...
 ```
 
 ---
