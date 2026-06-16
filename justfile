@@ -101,14 +101,10 @@ pkg_meta:
 [parallel]
 ci: lint typecheck file_checks check-commits pkg_meta nox
 
-[doc("Release a new version: just release patch|minor|major")]
+[doc("Manually bump version and push tag (auto: CD does this on merge to main)")]
 [group("infra")]
 [confirm("Release to PyPI?")]
-release bump="patch":
-    uv version --bump {{bump}}
-    just build
-    git add pyproject.toml uv.lock
-    git commit -m "chore: bump version to $(uv version --short)"
-    git tag "v$(uv version --short)"
+release increment="":
+    uv run --locked --group hooks cz bump {{increment}}
     git push && git push --tags
     just clean
