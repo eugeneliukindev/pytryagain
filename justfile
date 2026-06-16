@@ -98,6 +98,7 @@ pkg_meta:
 
 [doc("Run all CI checks locally")]
 [group("ci")]
+[parallel]
 ci: lint typecheck file_checks check-commits pkg_meta nox
 
 [doc("Release a new version: just release patch|minor|major")]
