@@ -9,8 +9,8 @@ _default:
 [doc("Ruff format + check")]
 [group("linter")]
 lint:
-    uv run --group lint ruff format --check src/
-    uv run --group lint ruff check src/
+    uv run --group lint ruff format --check
+    uv run --group lint ruff check
 
 [doc("Mypy check")]
 [group("static analysis")]
@@ -27,10 +27,10 @@ test *args:
 [parallel]
 check: lint typecheck test
 
-[doc("Run tests across Python 3.10–3.13 via nox")]
+[doc("Run tests across Python 3.10–3.15 via nox")]
 [group("tests")]
 nox *args:
-    uvx nox {{args}}
+    uv run --group nox nox {{args}}
 
 [doc("Release a new version: just release patch|minor|major")]
 [group("release")]

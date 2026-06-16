@@ -10,15 +10,6 @@ on:
   workflow_dispatch:
 
 jobs:
-  commitizen:
-    name: Commit message lint
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - uses: wagoid/commitlint-github-action@v6
-
   lint:
     name: Ruff
     runs-on: ubuntu-latest
@@ -41,6 +32,26 @@ jobs:
       - uses: extractions/setup-just@v2
       - run: just nox -s typecheck
 
+  file_checks:
+    name: File checks (pre-commit)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+      - uses: extractions/setup-just@v2
+      - run: just nox -s file_checks
+
+  commitizen:
+    name: Commit message lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: wagoid/commitlint-github-action@v6
+
   tests:
     name: Tests (Python ${{ matrix.python }}, ${{ matrix.os }})
     runs-on: ${{ matrix.os }}
@@ -58,6 +69,7 @@ jobs:
       - uses: extractions/setup-just@v2
       - run: just nox -s tests-${{ matrix.python }}
       - name: Upload coverage reports to Codecov
+        if: github.actor != 'dependabot[bot]'
         uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
