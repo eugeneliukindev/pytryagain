@@ -35,4 +35,11 @@ jobs:
         with:
           enable-cache: true
       - uses: extractions/setup-just@v4
-      - run: just --yes release
+
+      - name: Configure Git
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Release
+        run: just --yes release
