@@ -27,7 +27,7 @@ test *args:
 [parallel]
 check: lint typecheck test
 
-[doc("Run tests across Python 3.10–3.13 via nox")]
+[doc("Run tests across Python 3.10–3.15 via nox")]
 [group("tests")]
 nox *args:
     uv run --group nox nox {{args}}
