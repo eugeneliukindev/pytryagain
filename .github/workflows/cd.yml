@@ -5,9 +5,23 @@ on:
     branches: [main]
 
 jobs:
-  bump:
+  preview:
     runs-on: ubuntu-latest
     if: "!startsWith(github.event.head_commit.message, 'bump:')"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+      - uses: extractions/setup-just@v4
+      - name: Preview version bump
+        run: uv run --locked --group hooks cz bump --dry-run
+
+  bump:
+    runs-on: ubuntu-latest
+    needs: preview
     environment: release
     permissions:
       contents: write
