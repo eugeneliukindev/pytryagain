@@ -47,6 +47,7 @@ tests = [
 ]
 hooks = [
     "pre-commit>=4",
+    "commitizen>=4",
 ]
 pkg-check = [
     "twine>=6",
@@ -92,6 +93,11 @@ data_file = "coverage/.coverage"
 [tool.coverage.report]
 fail_under = 100
 skip_covered = true
+
+[tool.commitizen]
+tag_format = "v$version"
+version_scheme = "semver"
+version_provider = "pep621"
 
 [tool.mypy]
 mypy_path = "src"

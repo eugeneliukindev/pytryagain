@@ -19,7 +19,7 @@ jobs:
         with:
           enable-cache: true
       - uses: extractions/setup-just@v4
-      - run: just nox -s lint
+      - run: just lint
 
   typecheck:
     name: Mypy
@@ -30,27 +30,32 @@ jobs:
         with:
           enable-cache: true
       - uses: extractions/setup-just@v4
-      - run: just nox -s typecheck
+      - run: just typecheck
 
   file_checks:
     name: File checks (pre-commit)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v6
+      - uses: astral-sh/setup-uv@v7
         with:
           enable-cache: true
-      - uses: extractions/setup-just@v2
-      - run: just nox -s file_checks
+      - uses: extractions/setup-just@v4
+      - run: just file_checks
 
   commitizen:
     name: Commit message lint
     runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - uses: wagoid/commitlint-github-action@v6
+      - uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+      - uses: extractions/setup-just@v4
+      - run: just check-commits "${{ github.event.pull_request.base.sha }}..${{ github.sha }}"
 
   tests:
     name: Tests (Python ${{ matrix.python }}, ${{ matrix.os }})
@@ -70,7 +75,7 @@ jobs:
       - run: just nox -s tests-${{ matrix.python }}
       - name: Upload coverage reports to Codecov
         if: github.actor != 'dependabot[bot]'
-        uses: codecov/codecov-action@v5
+        uses: codecov/codecov-action@v7
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           slug: eugeneliukindev/pytryagain
@@ -87,4 +92,4 @@ jobs:
         with:
           enable-cache: true
       - uses: extractions/setup-just@v4
-      - run: just nox -s pkg_meta
+      - run: just pkg_meta
