@@ -9,6 +9,9 @@ _PYPROJECT = nox.project.load_toml("pyproject.toml")
 PYTHON_VERSIONS = nox.project.python_versions(_PYPROJECT)
 
 
+# Nox sessions delegate to pre-commit hooks instead of calling tools directly so that
+# local commits and CI always use the same tool versions (pinned via uv.lock) and the
+# same flags — pre-commit is the single source of truth.
 def _pre_commit_run(session: nox.Session, hook_id: str) -> None:
     session.run(
         "uv",
