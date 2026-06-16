@@ -27,19 +27,32 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v6
+      - name: Checkout code
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
-          token: ${{ secrets.GITHUB_TOKEN }}
-      - uses: astral-sh/setup-uv@v7
-        with:
-          enable-cache: true
-      - uses: extractions/setup-just@v4
+          token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+          persist-credentials: true
 
       - name: Configure Git
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
 
-      - name: Release
-        run: just --yes release
+      - uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+
+      - uses: extractions/setup-just@v4
+
+      - name: Bump version and push
+        run: |
+          export GIT_AUTHOR_NAME="github-actions[bot]"
+          export GIT_AUTHOR_EMAIL="github-actions[bot]@users.noreply.github.com"
+          export GIT_COMMITTER_NAME="github-actions[bot]"
+          export GIT_COMMITTER_EMAIL="github-actions[bot]@users.noreply.github.com"
+          
+          just bump --yes
+          
+          git push origin main
+          git push origin --tags
