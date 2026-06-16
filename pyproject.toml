@@ -94,6 +94,11 @@ data_file = "coverage/.coverage"
 fail_under = 100
 skip_covered = true
 
+# Increment | Description                  | Conventional commit map
+# --------- | ---------------------------- | --------------------------------
+# MAJOR     | Breaking changes introduced  | BREAKING CHANGE, bang (e.g. feat!)
+# MINOR     | New features                 | feat
+# PATCH     | Fixes and improvements       | fix, perf, refactor
 [tool.commitizen]
 tag_format = "v$version"
 version_scheme = "semver"
