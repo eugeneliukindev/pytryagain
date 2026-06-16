@@ -77,7 +77,7 @@ jobs:
       - uses: extractions/setup-just@v4
       - run: just nox -s tests-${{ matrix.python }}
       - name: Upload coverage reports to Codecov
-        if: github.actor != 'dependabot[bot]'
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.actor != 'dependabot[bot]'
         uses: codecov/codecov-action@v7
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
