@@ -2,9 +2,25 @@ from pathlib import Path
 
 import nox
 
+nox.needs_version = ">=2024.10"
 nox.options.default_venv_backend = "uv"
 
-PYTHON_VERSIONS = ("3.10", "3.11", "3.12", "3.13", "3.14", "3.15")
+_PYPROJECT = nox.project.load_toml("pyproject.toml")
+PYTHON_VERSIONS = nox.project.python_versions(_PYPROJECT)
+
+
+def _pre_commit_run(session: nox.Session, hook_id: str) -> None:
+    session.run(
+        "uv",
+        "run",
+        "--locked",
+        "--group=hooks",
+        "pre-commit",
+        "run",
+        hook_id,
+        "--all-files",
+        external=True,
+    )
 
 
 @nox.session(python=PYTHON_VERSIONS)
@@ -23,22 +39,21 @@ def tests(session: nox.Session) -> None:
 
 @nox.session(venv_backend="none")
 def lint(session: nox.Session) -> None:
-    session.log("Checking ruff format")
-    session.run("uv", "run", "--locked", "--group=lint", "ruff", "format", "--check", external=True)
     session.log("Running ruff lint")
-    session.run("uv", "run", "--locked", "--group=lint", "ruff", "check", external=True)
+    _pre_commit_run(session, "ruff")
+    session.log("Checking ruff format")
+    _pre_commit_run(session, "ruff-format")
 
 
 @nox.session(venv_backend="none")
 def typecheck(session: nox.Session) -> None:
-    session.log("Running mypy in strict mode")
-    session.run("uv", "run", "--locked", "--group=typecheck", "mypy", external=True)
+    session.log("Running mypy")
+    _pre_commit_run(session, "mypy")
 
 
 @nox.session(venv_backend="none")
-def pre_commit(session: nox.Session) -> None:
-    # ruff, ruff-format and mypy are skipped here because they run as dedicated nox sessions (lint, typecheck)
-    session.log("Running pre-commit file-check hooks on all files")
+def file_checks(session: nox.Session) -> None:
+    session.log("Running pre-commit file-check hooks")
     session.run(
         "uv",
         "run",
@@ -64,5 +79,12 @@ def pkg_meta(session: nox.Session) -> None:
     session.run("uv", "run", "--locked", "--group=pkg-check", "twine", "check", *wheels, *sdists, external=True)
     session.log("Checking wheel contents")
     session.run(
-        "uv", "run", "--locked", "--group=pkg-check", "check-wheel-contents", "--no-config", *wheels, external=True
+        "uv",
+        "run",
+        "--locked",
+        "--group=pkg-check",
+        "check-wheel-contents",
+        "--no-config",
+        *wheels,
+        external=True,
     )
