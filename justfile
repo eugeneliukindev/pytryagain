@@ -15,17 +15,22 @@ lint:
 [doc("Mypy check")]
 [group("static analysis")]
 typecheck:
-    uv run --group typing mypy src/
+    uv run --group typecheck mypy src/
 
 [doc("Run tests")]
 [group("tests")]
 test *args:
-    uv run --group test pytest {{args}}
+    uv run --group tests pytest {{args}}
 
 [doc("Run all checks")]
 [group("infra")]
 [parallel]
 check: lint typecheck test
+
+[doc("Run tests across Python 3.10–3.13 via nox")]
+[group("tests")]
+nox *args:
+    uvx nox {{args}}
 
 [doc("Release a new version: just release patch|minor|major")]
 [group("release")]
