@@ -3,24 +3,12 @@ import inspect
 import time
 from collections.abc import Awaitable, Callable
 from functools import partial, wraps
-from typing import ParamSpec, TypeVar, overload
+from typing import Any, ParamSpec, TypeVar, cast, overload
 
-from ._types import (
-    AnyExceptionCallback,
-    BackOffByException,
-    ShouldRetry,
-    SyncExceptionCallback,
-)
-from ._utils import (
-    _always_retry,
-    _compute_deadline,
-    _get_backoff,
-    _invoke_callback,
-    _noop_exception_callback,
-    _should_give_up,
-)
-from ._validators import _validate_retry_params, _validate_sync_func_callback_compat
-from .backoff import BackOff, ExponentialJitterBackoff
+from pytryagain._sentinel import _MISSING, _Sentinel
+from pytryagain._types import AnyExceptionCallback, AsyncExceptionCallback, RetryPredicate, SyncExceptionCallback
+from pytryagain._utils import _compute_deadline, _should_give_up
+from pytryagain.backoff import BackOff, ExponentialJitterBackoff
 
 _P = ParamSpec("_P")
 _T = TypeVar("_T")
@@ -28,169 +16,224 @@ _T = TypeVar("_T")
 _DEFAULT_BACKOFF: BackOff = ExponentialJitterBackoff()
 
 
+def _validate_retry_params(
+    tries: int,
+    timeout: float | _Sentinel,
+    exceptions: tuple[type[BaseException], ...],
+) -> None:
+    if not isinstance(tries, int) or tries < 1:
+        msg = f"tries must be an integer >= 1, got {tries!r}"
+        raise ValueError(msg)
+    if not isinstance(timeout, _Sentinel) and (not isinstance(timeout, (int, float)) or timeout <= 0):
+        msg = f"timeout must be a positive number, got {timeout!r}"
+        raise ValueError(msg)
+    if not isinstance(exceptions, tuple) or not exceptions:
+        msg = f"exceptions must be a non-empty tuple of exception types, got {exceptions!r}"
+        raise ValueError(msg)
+    if not all(isinstance(exc, type) and issubclass(exc, BaseException) for exc in exceptions):
+        msg = f"all items in exceptions must be BaseException subclasses, got {exceptions!r}"
+        raise ValueError(msg)
+
+
 @overload
 def retry(
     func: Callable[_P, Awaitable[_T]],
-    max_attempts: int,
+    tries: int,
     exceptions: tuple[type[BaseException], ...],
-    timeout: float,
-    default_backoff: BackOff,
-    backoff_by_exception: BackOffByException | None,
-    should_retry: ShouldRetry | None,
-    on_retry_callback: AnyExceptionCallback | None,
-    on_give_up_callback: AnyExceptionCallback | None,
+    timeout: float | _Sentinel,
+    backoff: BackOff,
+    retry_if: RetryPredicate | _Sentinel,
+    on_exception_callback: AnyExceptionCallback | _Sentinel,
+    on_giveup_callback: AnyExceptionCallback | _Sentinel,
 ) -> Callable[_P, Awaitable[_T]]: ...
 
 
 @overload
 def retry(
-    func: None,
-    max_attempts: int,
+    func: _Sentinel,
+    tries: int,
     exceptions: tuple[type[BaseException], ...],
-    timeout: float,
-    default_backoff: BackOff,
-    backoff_by_exception: BackOffByException | None,
-    should_retry: ShouldRetry | None,
-    on_retry_callback: AnyExceptionCallback | None,
-    on_give_up_callback: AnyExceptionCallback | None,
+    timeout: float | _Sentinel,
+    backoff: BackOff,
+    retry_if: RetryPredicate | _Sentinel,
+    on_exception_callback: AnyExceptionCallback | _Sentinel,
+    on_giveup_callback: AnyExceptionCallback | _Sentinel,
 ) -> Callable[[Callable[_P, _T]], Callable[_P, _T]]: ...
 
 
 @overload
 def retry(
     func: Callable[_P, _T],
-    max_attempts: int,
+    tries: int,
     exceptions: tuple[type[BaseException], ...],
-    timeout: float,
-    default_backoff: BackOff,
-    backoff_by_exception: BackOffByException | None,
-    should_retry: ShouldRetry | None,
-    on_retry_callback: SyncExceptionCallback | None,
-    on_give_up_callback: SyncExceptionCallback | None,
+    timeout: float | _Sentinel,
+    backoff: BackOff,
+    retry_if: RetryPredicate | _Sentinel,
+    on_exception_callback: SyncExceptionCallback | _Sentinel,
+    on_giveup_callback: SyncExceptionCallback | _Sentinel,
 ) -> Callable[_P, _T]: ...
 
 
 def retry(
-    func: Callable[_P, _T] | None = None,
-    max_attempts: int = 3,
+    func: Callable[_P, _T] | _Sentinel = _MISSING,
+    tries: int = 3,
     exceptions: tuple[type[BaseException], ...] = (Exception,),
-    timeout: float = float("inf"),
-    default_backoff: BackOff = _DEFAULT_BACKOFF,
-    backoff_by_exception: BackOffByException | None = None,
-    should_retry: ShouldRetry | None = None,
-    on_retry_callback: AnyExceptionCallback | None = None,
-    on_give_up_callback: AnyExceptionCallback | None = None,
+    timeout: float | _Sentinel = _MISSING,
+    backoff: BackOff = _DEFAULT_BACKOFF,
+    retry_if: RetryPredicate | _Sentinel = _MISSING,
+    on_exception_callback: AnyExceptionCallback | _Sentinel = _MISSING,
+    on_giveup_callback: AnyExceptionCallback | _Sentinel = _MISSING,
 ) -> Callable[_P, _T] | Callable[_P, Awaitable[_T]]:
     """Decorator that retries a function on exception.
 
     Supports both sync and async functions. Can be used as a plain decorator
-    ``@retry`` or as a decorator factory ``@retry(max_attempts=5)``.
+    ``@retry`` or as a decorator factory ``@retry(tries=5)``.
 
     Args:
         func: The function to wrap. When omitted, returns a partially applied
             decorator (decorator factory mode).
-        max_attempts: Total number of attempts, including the first call.
-            ``max_attempts=1`` means no retries. Must be >= 1.
+        tries: Total number of attempts, including the first call. ``tries=1``
+            means no retries. Must be >= 1.
         exceptions: Tuple of exception types that trigger a retry. Any other
             exception propagates immediately without retrying.
         timeout: Total time budget in seconds across all attempts. Once elapsed,
             the current exception is re-raised without further retries.
-        default_backoff: Delay strategy between attempts. Receives the current attempt
+        backoff: Delay strategy between attempts. Receives the current attempt
             number (1-based) and returns the sleep duration in seconds.
-        backoff_by_exception: Per-exception-type delay overrides. Keys are
-            BaseException subclasses; the first matching key wins. Falls back to
-            ``default_backoff`` when no key matches.
-        should_retry: Predicate called with the caught exception. Return ``True``
+        retry_if: Predicate called with the caught exception. Return ``True``
             to retry, ``False`` to re-raise immediately (after calling
-            ``on_give_up_callback``). When omitted, all matching exceptions retry.
-        on_retry_callback: Called after each failed attempt except the last.
+            ``on_giveup_callback``). When omitted, all matching exceptions retry.
+        on_exception_callback: Called after each failed attempt except the last.
             Receives the exception and the 1-based attempt number. For async
             functions, both sync and async callbacks are accepted. For sync
             functions, only a sync callback is allowed.
-        on_give_up_callback: Called once when all attempts are exhausted or a
-            retry is aborted by ``should_retry``, before re-raising the exception.
-            Same sync/async rules as ``on_retry_callback``.
+        on_giveup_callback: Called once when all attempts are exhausted or a
+            retry is aborted by ``retry_if``, before re-raising the exception.
+            Same sync/async rules as ``on_exception_callback``.
 
     Returns:
         The wrapped function preserving the original signature, or a partially
         applied decorator when ``func`` is not provided.
 
     Raises:
-        TypeError: If any parameter has an incorrect type, or if an async callback
-            is passed for a sync function.
-        ValueError: If ``max_attempts`` < 1, ``timeout`` <= 0, or ``exceptions`` is empty.
+        ValueError: If an async callback is passed for a sync function.
         BaseException: The original exception after all attempts are exhausted,
-            timeout is exceeded, or ``should_retry`` returns ``False``.
+            timeout is exceeded, or ``retry_if`` returns ``False``.
 
-    See also: https://github.com/eugeneliukindev/pytryagain/blob/main/README.md#examples
+    Examples:
+        Simplest usage — 3 attempts with 1 s constant delay:
+
+        >>> @retry
+        ... def fetch_data(url: str) -> bytes: ...
+
+        Async function with exponential backoff and total timeout:
+
+        >>> @retry(tries=5, backoff=ExponentialBackoff(), timeout=30.0)
+        ... async def send_message(text: str) -> None: ...
+
+        Retry only on specific exception types:
+
+        >>> @retry(tries=4, exceptions=(TimeoutError, ConnectionError))
+        ... def connect(host: str) -> None: ...
+
+        Log every failed attempt:
+
+        >>> def log_attempt(exc: BaseException, attempt: int) -> None:
+        ...     print(f"attempt {attempt} failed: {exc}")
+        ...
+        >>> @retry(tries=3, on_exception_callback=log_attempt)
+        ... def unstable_call() -> None: ...
+
+        Retry only when the error is transient (e.g. HTTP 503):
+
+        >>> @retry(tries=5, retry_if=lambda e: getattr(e, "status_code", None) == 503)
+        ... def call_api() -> dict: ...  # type: ignore[empty-body]
+
+        Alert when all retries are exhausted:
+
+        >>> def alert(exc: BaseException, attempt: int) -> None:
+        ...     print(f"gave up after {attempt} attempts: {exc}")
+        ...
+        >>> @retry(tries=3, on_giveup_callback=alert)
+        ... def critical_job() -> None: ...
+
+        Async giveup callback:
+
+        >>> async def async_alert(exc: BaseException, attempt: int) -> None:
+        ...     await notify_slack(f"job failed: {exc}")
+        ...
+        >>> @retry(tries=3, on_giveup_callback=async_alert)
+        ... async def critical_async_job() -> None: ...
     """
-    _validate_retry_params(
-        max_attempts,
-        exceptions,
-        timeout,
-        default_backoff,
-        backoff_by_exception,
-        should_retry,
-        on_retry_callback,
-        on_give_up_callback,
-    )
+    _validate_retry_params(tries, timeout, exceptions)
 
-    should_retry = _always_retry if should_retry is None else should_retry
-    on_retry_callback = _noop_exception_callback if on_retry_callback is None else on_retry_callback
-    on_give_up_callback = _noop_exception_callback if on_give_up_callback is None else on_give_up_callback
-    backoff_by_exception = {} if backoff_by_exception is None else backoff_by_exception
-
-    if func is None:
-        return partial(  # type: ignore[return-value]
-            retry,
-            max_attempts=max_attempts,
-            exceptions=exceptions,
-            timeout=timeout,
-            default_backoff=default_backoff,
-            backoff_by_exception=backoff_by_exception,
-            should_retry=should_retry,
-            on_retry_callback=on_retry_callback,
-            on_give_up_callback=on_give_up_callback,
+    if isinstance(func, _Sentinel):
+        return cast(
+            "Callable[_P, _T]",
+            partial(
+                retry,
+                tries=tries,
+                exceptions=exceptions,
+                timeout=timeout,
+                backoff=backoff,
+                retry_if=retry_if,
+                on_exception_callback=on_exception_callback,
+                on_giveup_callback=on_giveup_callback,
+            ),
         )
 
     is_async_func = inspect.iscoroutinefunction(func)
-    is_async_retry_callback = inspect.iscoroutinefunction(on_retry_callback)
-    is_async_give_up_callback = inspect.iscoroutinefunction(on_give_up_callback)
-
-    _validate_sync_func_callback_compat(
-        is_async_func=is_async_func,
-        is_async_retry_callback=is_async_retry_callback,
-        is_async_give_up_callback=is_async_give_up_callback,
+    is_async_callback = not isinstance(on_exception_callback, _Sentinel) and inspect.iscoroutinefunction(
+        on_exception_callback
     )
+    is_async_giveup = not isinstance(on_giveup_callback, _Sentinel) and inspect.iscoroutinefunction(on_giveup_callback)
+
+    if not is_async_func and is_async_callback:
+        msg = "async on_exception_callback cannot be used with sync func"
+        raise ValueError(msg)
+    if not is_async_func and is_async_giveup:
+        msg = "async on_giveup_callback cannot be used with sync func"
+        raise ValueError(msg)
 
     @wraps(func)
     def sync_wrapper(*args: _P.args, **kwargs: _P.kwargs) -> _T:  # type: ignore[return]
         deadline = _compute_deadline(timeout)
 
-        for attempt in range(1, max_attempts + 1):  # pragma: no branch
+        for attempt in range(1, tries + 1):  # pragma: no branch
             try:
                 return func(*args, **kwargs)
-            except exceptions as exception:
-                if _should_give_up(attempt, max_attempts, deadline, should_retry, exception):
-                    on_give_up_callback(exception, attempt)
+            except exceptions as e:
+                if _should_give_up(attempt, tries, deadline, retry_if, e):
+                    if not isinstance(on_giveup_callback, _Sentinel):
+                        cast("SyncExceptionCallback", on_giveup_callback)(e, attempt)
                     raise
-                on_retry_callback(exception, attempt)
-                backoff = _get_backoff(default_backoff, backoff_by_exception, exception)
+
+                if not isinstance(on_exception_callback, _Sentinel):
+                    cast("SyncExceptionCallback", on_exception_callback)(e, attempt)
                 time.sleep(backoff(attempt))
 
     @wraps(func)
     async def async_wrapper(*args: _P.args, **kwargs: _P.kwargs) -> _T:  # type: ignore[return]
+        async_func = cast("Callable[_P, Awaitable[Any]]", func)
         deadline = _compute_deadline(timeout)
 
-        for attempt in range(1, max_attempts + 1):  # pragma: no branch
+        for attempt in range(1, tries + 1):  # pragma: no branch
             try:
-                return await func(*args, **kwargs)  # type: ignore[misc,no-any-return]
-            except exceptions as exception:
-                if _should_give_up(attempt, max_attempts, deadline, should_retry, exception):
-                    await _invoke_callback(on_give_up_callback, exception, attempt, is_async=is_async_give_up_callback)
+                return cast("_T", await async_func(*args, **kwargs))
+            except exceptions as e:
+                if _should_give_up(attempt, tries, deadline, retry_if, e):
+                    if not isinstance(on_giveup_callback, _Sentinel):
+                        if is_async_giveup:
+                            await cast("AsyncExceptionCallback", on_giveup_callback)(e, attempt)
+                        else:
+                            cast("SyncExceptionCallback", on_giveup_callback)(e, attempt)
                     raise
-                await _invoke_callback(on_retry_callback, exception, attempt, is_async=is_async_retry_callback)
-                backoff = _get_backoff(default_backoff, backoff_by_exception, exception)
+
+                if not isinstance(on_exception_callback, _Sentinel):
+                    if is_async_callback:
+                        await cast("AsyncExceptionCallback", on_exception_callback)(e, attempt)
+                    else:
+                        cast("SyncExceptionCallback", on_exception_callback)(e, attempt)
                 await asyncio.sleep(backoff(attempt))
 
     return async_wrapper if is_async_func else sync_wrapper
