@@ -218,7 +218,7 @@ class TestRetryIfResult:
         assert patch_sleep.call_count == 2
 
     def test_timeout_stops_result_retry(self, mocker: MockerFixture, patch_sleep: MagicMock) -> None:
-        mocker.patch("pytryagain._retry._is_timed_out", return_value=True)
+        mocker.patch("pytryagain._utils._is_timed_out", return_value=True)
 
         @retry(tries=5, default_backoff=_BACKOFF, timeout=30.0, retry_if_result=lambda x: x != 42)
         def always_returns_zero() -> int:
@@ -230,7 +230,7 @@ class TestRetryIfResult:
         patch_sleep.assert_not_called()
 
     async def test_async_timeout_stops_result_retry(self, mocker: MockerFixture, patch_async_sleep: AsyncMock) -> None:
-        mocker.patch("pytryagain._retry._is_timed_out", return_value=True)
+        mocker.patch("pytryagain._utils._is_timed_out", return_value=True)
 
         @retry(tries=5, default_backoff=_BACKOFF, timeout=30.0, retry_if_result=lambda x: x != 42)
         async def always_returns_zero() -> int:

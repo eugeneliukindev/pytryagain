@@ -8,13 +8,18 @@ from typing import Any, ParamSpec, TypeVar, cast, overload
 from ._sentinel import _MISSING, _Sentinel
 from ._types import (
     AnyExceptionCallback,
-    AsyncExceptionCallback,
     BackOffByException,
     RetryIfException,
     RetryIfResult,
     SyncExceptionCallback,
 )
-from ._utils import _compute_deadline, _is_timed_out, _should_give_up
+from ._utils import (
+    _compute_deadline,
+    _invoke_async_callback,
+    _invoke_sync_callback,
+    _should_accept_result,
+    _should_give_up,
+)
 from ._validators import _validate_retry_params
 from .backoff import BackOff, ExponentialJitterBackoff
 
@@ -187,21 +192,14 @@ def retry(
         for attempt in range(1, tries + 1):  # pragma: no branch
             try:
                 result: _T = typed_func(*args, **kwargs)
-                if (
-                    retry_if_result is _MISSING
-                    or not cast("RetryIfResult", retry_if_result)(result)
-                    or attempt >= tries
-                    or _is_timed_out(deadline)
-                ):
+                if _should_accept_result(retry_if_result, result, attempt, tries, deadline):
                     return result
                 time.sleep(default_backoff(attempt))
             except exceptions as exc:
                 if _should_give_up(attempt, tries, deadline, retry_if_exception, exc):
-                    if on_giveup_callback is not _MISSING:
-                        cast("SyncExceptionCallback", on_giveup_callback)(exc, attempt)
+                    _invoke_sync_callback(on_giveup_callback, exc, attempt)
                     raise
-                if on_exception_callback is not _MISSING:
-                    cast("SyncExceptionCallback", on_exception_callback)(exc, attempt)
+                _invoke_sync_callback(on_exception_callback, exc, attempt)
                 time.sleep(_get_backoff(default_backoff, backoff_by_exception, exc)(attempt))
 
     @wraps(typed_func)
@@ -212,27 +210,14 @@ def retry(
         for attempt in range(1, tries + 1):  # pragma: no branch
             try:
                 result: _T = cast("_T", await async_func(*args, **kwargs))
-                if (
-                    retry_if_result is _MISSING
-                    or not cast("RetryIfResult", retry_if_result)(result)
-                    or attempt >= tries
-                    or _is_timed_out(deadline)
-                ):
+                if _should_accept_result(retry_if_result, result, attempt, tries, deadline):
                     return result
                 await asyncio.sleep(default_backoff(attempt))
             except exceptions as exc:
                 if _should_give_up(attempt, tries, deadline, retry_if_exception, exc):
-                    if on_giveup_callback is not _MISSING:
-                        if is_async_giveup:
-                            await cast("AsyncExceptionCallback", on_giveup_callback)(exc, attempt)
-                        else:
-                            cast("SyncExceptionCallback", on_giveup_callback)(exc, attempt)
+                    await _invoke_async_callback(on_giveup_callback, exc, attempt, is_async=is_async_giveup)
                     raise
-                if on_exception_callback is not _MISSING:
-                    if is_async_callback:
-                        await cast("AsyncExceptionCallback", on_exception_callback)(exc, attempt)
-                    else:
-                        cast("SyncExceptionCallback", on_exception_callback)(exc, attempt)
+                await _invoke_async_callback(on_exception_callback, exc, attempt, is_async=is_async_callback)
                 await asyncio.sleep(_get_backoff(default_backoff, backoff_by_exception, exc)(attempt))
 
     return async_wrapper if is_async_func else sync_wrapper
