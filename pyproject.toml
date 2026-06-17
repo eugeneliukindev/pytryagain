@@ -74,8 +74,7 @@ addopts = [
     "-s",
     "-v",
     "--color=yes",
-    "--cov=src",
-    "--cov=tests",
+    "--cov",
     "--cov-report=html:coverage/htmlcov",
     "--cov-report=xml:coverage/coverage.xml",
     "--cov-report=term",
@@ -84,15 +83,32 @@ addopts = [
 asyncio_mode = "auto"
 
 [tool.coverage.run]
-source = ["src"]
+source = ["src", "tests"]
 branch = true
 parallel = true
 data_file = "coverage/.coverage"
 
-
 [tool.coverage.report]
 fail_under = 100
+show_missing = true
 skip_covered = true
+exclude_lines = [
+    "pragma: no cover",
+    "^\\s*raise AssertionError\\b",
+    "^\\s*raise NotImplementedError\\b",
+    "^\\s*return NotImplemented\\b",
+    "^\\s*raise$",
+    "^\\s*if (False|TYPE_CHECKING):",
+    ": \\.\\.\\.(\\s*#.*)?$",
+    "^ +\\.\\.\\.$",
+    "-> ['\"]?NoReturn['\"]?:",
+    "^\\s*assert_never\\b",
+    "^if __name__ == [\"']__main__[\"']:$",
+]
+
+[tool.coverage.html]
+skip_covered = false
+show_contexts = true
 
 # Increment | Description                  | Conventional commit map
 # --------- | ---------------------------- | --------------------------------

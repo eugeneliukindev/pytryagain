@@ -121,7 +121,7 @@ class TestSyncRetry:
             retry(max_attempts=2, on_give_up_callback=AsyncMock())(lambda: None)
 
 
-class TestRetryIfException:
+class TestShouldRetry:
     def test_retries_when_predicate_returns_true(self, patch_sleep: MagicMock) -> None:
         call_count = 0
 
